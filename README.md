@@ -95,7 +95,7 @@ pipeboard doctor
 
 ### Transforms (fx)
 
-**The killer feature.** Define transforms in your config, then process clipboard contents in-place:
+Define transforms in your config, then process clipboard contents in-place:
 
 ```bash
 # Format JSON in clipboard
