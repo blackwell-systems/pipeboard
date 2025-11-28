@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.0] - 2025-01-28
+
+### Added
+- **Programmable clipboard transforms** - `pipeboard fx <name>` runs user-defined transforms on clipboard contents
+  - Configure transforms in `fx` section of config with `cmd` (array) or `shell` (string) syntax
+  - `fx --list` shows available transforms
+  - `fx <name> --dry-run` previews output without modifying clipboard
+  - Example transforms: `pretty-json` (jq), `strip-ansi`, `redact-secrets`, `yaml-to-json`
+
 ## [0.3.0] - 2025-01-28
 
 ### Added
@@ -46,7 +55,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - SSH transport for peer sync
 - Optional S3 server-side encryption (AES256/KMS)
 
-[Unreleased]: https://github.com/blackwell-systems/pipeboard/compare/v0.3.0...HEAD
+[Unreleased]: https://github.com/blackwell-systems/pipeboard/compare/v0.4.0...HEAD
+[0.4.0]: https://github.com/blackwell-systems/pipeboard/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/blackwell-systems/pipeboard/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/blackwell-systems/pipeboard/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/blackwell-systems/pipeboard/releases/tag/v0.1.0

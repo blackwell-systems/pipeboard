@@ -146,6 +146,53 @@ pipeboard paste > ~/.kube/config
 alias pb='pipeboard'
 ```
 
+### Transforms (fx)
+
+Define custom clipboard transforms in your config, then run them with `pipeboard fx`:
+
+```bash
+# Format JSON in clipboard
+pipeboard fx pretty-json
+
+# Preview transform output without modifying clipboard
+pipeboard fx strip-ansi --dry-run
+
+# List available transforms
+pipeboard fx --list
+```
+
+**Example transforms in config:**
+
+```yaml
+fx:
+  pretty-json:
+    cmd: ["jq", "."]
+    description: "Format JSON"
+
+  strip-ansi:
+    shell: "sed 's/\\x1b\\[[0-9;]*m//g'"
+    description: "Remove ANSI escape codes"
+
+  redact-secrets:
+    shell: "sed -E 's/AKIA[0-9A-Z]{16}/<AWS_KEY>/g'"
+    description: "Redact AWS keys"
+
+  yaml-to-json:
+    cmd: ["yq", "-o", "json"]
+    description: "Convert YAML to JSON"
+
+  base64-decode:
+    cmd: ["base64", "-d"]
+    description: "Decode base64"
+```
+
+**Use cases:**
+- Pretty-print JSON/YAML before pasting
+- Redact secrets before sharing in Slack/LLMs
+- Strip ANSI codes from terminal output
+- Convert between formats (JSON↔YAML, base64)
+- Normalize configs before pushing to S3
+
 ## Configuration
 
 Config file: `~/.config/pipeboard/config.yaml`
@@ -166,6 +213,14 @@ peers:
     ssh: dayna-mac.local
   wsl:
     ssh: wsl-host
+
+# Clipboard transforms
+fx:
+  pretty-json:
+    cmd: ["jq", "."]
+    description: "Format JSON"
+  strip-ansi:
+    shell: "sed 's/\\x1b\\[[0-9;]*m//g'"
 
 # Optional remote sync backend
 sync:
@@ -204,6 +259,9 @@ PIPEBOARD_S3_SSE           # server-side encryption
 | `clear` | Clear the clipboard |
 | `backend` | Show detected clipboard backend |
 | `doctor` | Check dependencies and environment |
+| `fx <name>` | Run clipboard transform (in-place) |
+| `fx <name> --dry-run` | Preview transform without modifying clipboard |
+| `fx --list` | List available transforms |
 | `send [peer]` | Send clipboard to peer via SSH (uses default if no peer) |
 | `recv [peer]` | Receive from peer via SSH (uses default if no peer) |
 | `peek [peer]` | Print peer's clipboard to stdout (uses default if no peer) |
