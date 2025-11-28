@@ -4,6 +4,8 @@
 
 Blackwell Systems™ and the Blackwell Systems logo are trademarks of Dayna Blackwell.
 
+pipeboard™ is a product of Blackwell Systems™.
+
 ## Logo
 
 The Blackwell Systems logo © 2025 Dayna Blackwell. All rights reserved.

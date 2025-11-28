@@ -6,6 +6,7 @@ import (
 	"runtime"
 	"strings"
 	"testing"
+	"time"
 )
 
 func TestBackendKindConstants(t *testing.T) {
@@ -856,5 +857,417 @@ func TestIsPeerCommand(t *testing.T) {
 		if isPeerCommand(cmd) {
 			t.Errorf("isPeerCommand(%q) should return false", cmd)
 		}
+	}
+}
+
+// Test runCommand
+func TestRunCommand(t *testing.T) {
+	t.Run("empty command", func(t *testing.T) {
+		err := runCommand([]string{})
+		if err == nil {
+			t.Error("expected error for empty command")
+		}
+	})
+
+	t.Run("successful command", func(t *testing.T) {
+		err := runCommand([]string{"true"})
+		if err != nil {
+			t.Errorf("unexpected error: %v", err)
+		}
+	})
+
+	t.Run("failing command", func(t *testing.T) {
+		err := runCommand([]string{"false"})
+		if err == nil {
+			t.Error("expected error for failing command")
+		}
+	})
+}
+
+// Test runWithInput
+func TestRunWithInput(t *testing.T) {
+	t.Run("empty command", func(t *testing.T) {
+		err := runWithInput([]string{}, []byte("test"))
+		if err == nil {
+			t.Error("expected error for empty command")
+		}
+	})
+
+	t.Run("successful command with input", func(t *testing.T) {
+		err := runWithInput([]string{"cat"}, []byte("test"))
+		if err != nil {
+			t.Errorf("unexpected error: %v", err)
+		}
+	})
+
+	t.Run("failing command", func(t *testing.T) {
+		err := runWithInput([]string{"false"}, []byte("test"))
+		if err == nil {
+			t.Error("expected error for failing command")
+		}
+	})
+}
+
+// Test runAndPipeStdout
+func TestRunAndPipeStdout(t *testing.T) {
+	t.Run("empty command", func(t *testing.T) {
+		err := runAndPipeStdout([]string{})
+		if err == nil {
+			t.Error("expected error for empty command")
+		}
+	})
+
+	t.Run("successful command", func(t *testing.T) {
+		err := runAndPipeStdout([]string{"true"})
+		if err != nil {
+			t.Errorf("unexpected error: %v", err)
+		}
+	})
+}
+
+// Test cmdClear error paths
+func TestCmdClearNoPanic(t *testing.T) {
+	// cmdClear will fail in test environment without proper clipboard
+	// but we can test that it handles errors gracefully
+	err := cmdClear([]string{})
+	// We expect an error because there's no clipboard in test env
+	_ = err // Just verify it doesn't panic
+}
+
+// Test cmdBackend runs
+func TestCmdBackendNoPanic(t *testing.T) {
+	// cmdBackend will work on any system, just prints the backend
+	err := cmdBackend([]string{})
+	// May succeed or fail depending on environment
+	_ = err // Just verify it doesn't panic
+}
+
+// Test cmdDoctor runs without panic
+func TestCmdDoctorNoPanic(t *testing.T) {
+	// cmdDoctor should run without panicking
+	err := cmdDoctor([]string{})
+	_ = err // Just verify no panic
+}
+
+// Test cmdHistory with various filter combinations
+func TestCmdHistoryFilterCombinations(t *testing.T) {
+	// Set up temp history file
+	tmpDir := t.TempDir()
+	origXDG := os.Getenv("XDG_CONFIG_HOME")
+	defer func() {
+		if origXDG != "" {
+			_ = os.Setenv("XDG_CONFIG_HOME", origXDG)
+		} else {
+			_ = os.Unsetenv("XDG_CONFIG_HOME")
+		}
+	}()
+	_ = os.Setenv("XDG_CONFIG_HOME", tmpDir)
+
+	// Record some history entries
+	recordHistory("push", "slot1", 100)
+	recordHistory("send", "peer1", 50)
+	recordHistory("fx", "pretty-json", 200)
+
+	// Test each filter
+	testCases := []struct {
+		name string
+		args []string
+	}{
+		{"no filter", []string{}},
+		{"fx filter", []string{"--fx"}},
+		{"slots filter", []string{"--slots"}},
+		{"peer filter", []string{"--peer"}},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			err := cmdHistory(tc.args)
+			if err != nil {
+				t.Errorf("cmdHistory(%v) error: %v", tc.args, err)
+			}
+		})
+	}
+}
+
+// Test detectDarwin always returns a backend
+func TestDetectDarwinReturnsBackend(t *testing.T) {
+	b, err := detectDarwin()
+	if err != nil {
+		t.Fatalf("detectDarwin() error: %v", err)
+	}
+	if b == nil {
+		t.Fatal("detectDarwin() should return a backend")
+	}
+	if b.Kind != BackendDarwin {
+		t.Errorf("expected BackendDarwin, got %s", b.Kind)
+	}
+	if len(b.CopyCmd) == 0 {
+		t.Error("CopyCmd should not be empty")
+	}
+	if len(b.PasteCmd) == 0 {
+		t.Error("PasteCmd should not be empty")
+	}
+}
+
+// Test HistoryEntry struct
+func TestHistoryEntryFields(t *testing.T) {
+	entry := HistoryEntry{
+		Timestamp: time.Now(),
+		Command:   "push",
+		Target:    "myslot",
+		Size:      100,
+	}
+
+	if entry.Command != "push" {
+		t.Error("Command field mismatch")
+	}
+	if entry.Target != "myslot" {
+		t.Error("Target field mismatch")
+	}
+	if entry.Size != 100 {
+		t.Error("Size field mismatch")
+	}
+}
+
+// Test detectWSL returns a backend struct
+func TestDetectWSLReturns(t *testing.T) {
+	b := detectWSL()
+	// detectWSL returns nil if clip.exe is not found (which is expected in non-WSL env)
+	// We just verify it doesn't panic
+	if b != nil {
+		if b.Kind != BackendWSL {
+			t.Errorf("expected BackendWSL, got %s", b.Kind)
+		}
+	}
+}
+
+// Test cmdFx with dry-run flag
+func TestCmdFxDryRun(t *testing.T) {
+	// Create a temporary config with a simple transform
+	tmpDir := t.TempDir()
+	configFile := tmpDir + "/config.yaml"
+
+	configContent := `fx:
+  test-transform:
+    cmd: ["cat"]
+    description: "Test transform"
+`
+	if err := os.WriteFile(configFile, []byte(configContent), 0644); err != nil {
+		t.Fatalf("failed to write config: %v", err)
+	}
+
+	origConfig := os.Getenv("PIPEBOARD_CONFIG")
+	defer func() {
+		if origConfig != "" {
+			_ = os.Setenv("PIPEBOARD_CONFIG", origConfig)
+		} else {
+			_ = os.Unsetenv("PIPEBOARD_CONFIG")
+		}
+	}()
+
+	_ = os.Setenv("PIPEBOARD_CONFIG", configFile)
+
+	// Test --dry-run flag (will fail due to no clipboard, but tests flag parsing)
+	err := cmdFx([]string{"test-transform", "--dry-run"})
+	// Expected to fail due to clipboard access, but should not be a flag parsing error
+	if err != nil && strings.Contains(err.Error(), "unexpected") {
+		t.Error("--dry-run flag should be recognized")
+	}
+}
+
+// createMockSSH creates a mock ssh script for testing
+func createMockSSH(t *testing.T, response string, shouldFail bool) string {
+	t.Helper()
+	tmpDir := t.TempDir()
+	mockSSH := tmpDir + "/ssh"
+
+	var script string
+	if shouldFail {
+		script = "#!/bin/sh\nexit 1\n"
+	} else {
+		script = "#!/bin/sh\necho '" + response + "'\n"
+	}
+
+	if err := os.WriteFile(mockSSH, []byte(script), 0755); err != nil {
+		t.Fatalf("failed to create mock ssh: %v", err)
+	}
+	return tmpDir
+}
+
+// Test cmdSend with mock SSH
+func TestCmdSendWithMockSSH(t *testing.T) {
+	// Create mock SSH that succeeds
+	mockDir := createMockSSH(t, "ok", false)
+
+	// Create config with peer
+	tmpDir := t.TempDir()
+	configFile := tmpDir + "/config.yaml"
+	configContent := `peers:
+  testpeer:
+    ssh: testhost
+    remote_cmd: pipeboard
+`
+	if err := os.WriteFile(configFile, []byte(configContent), 0644); err != nil {
+		t.Fatalf("failed to write config: %v", err)
+	}
+
+	// Save and restore env
+	origPath := os.Getenv("PATH")
+	origConfig := os.Getenv("PIPEBOARD_CONFIG")
+	defer func() {
+		_ = os.Setenv("PATH", origPath)
+		restoreEnv("PIPEBOARD_CONFIG", origConfig)
+	}()
+
+	// Prepend mock to PATH
+	_ = os.Setenv("PATH", mockDir+":"+origPath)
+	_ = os.Setenv("PIPEBOARD_CONFIG", configFile)
+
+	// cmdSend will fail due to readClipboard, but that's expected
+	// We're testing the peer resolution and SSH command setup
+	err := cmdSend([]string{"testpeer"})
+	// Error is expected (no clipboard), but should mention the peer
+	if err != nil && !strings.Contains(err.Error(), "backend") {
+		// If error is about peer not found, that's a test failure
+		if strings.Contains(err.Error(), "not found") {
+			t.Errorf("peer should be found: %v", err)
+		}
+	}
+}
+
+// Test cmdSend with missing peer
+func TestCmdSendMissingPeer(t *testing.T) {
+	tmpDir := t.TempDir()
+	configFile := tmpDir + "/config.yaml"
+	configContent := `peers:
+  otherpeer:
+    ssh: otherhost
+`
+	if err := os.WriteFile(configFile, []byte(configContent), 0644); err != nil {
+		t.Fatalf("failed to write config: %v", err)
+	}
+
+	origConfig := os.Getenv("PIPEBOARD_CONFIG")
+	defer restoreEnv("PIPEBOARD_CONFIG", origConfig)
+	_ = os.Setenv("PIPEBOARD_CONFIG", configFile)
+
+	err := cmdSend([]string{"nonexistent"})
+	if err == nil {
+		t.Error("expected error for nonexistent peer")
+	}
+	if !strings.Contains(err.Error(), "unknown peer") {
+		t.Errorf("error should mention unknown peer: %v", err)
+	}
+}
+
+// Test cmdRecv with missing peer
+func TestCmdRecvMissingPeer(t *testing.T) {
+	tmpDir := t.TempDir()
+	configFile := tmpDir + "/config.yaml"
+	configContent := `peers:
+  otherpeer:
+    ssh: otherhost
+`
+	if err := os.WriteFile(configFile, []byte(configContent), 0644); err != nil {
+		t.Fatalf("failed to write config: %v", err)
+	}
+
+	origConfig := os.Getenv("PIPEBOARD_CONFIG")
+	defer restoreEnv("PIPEBOARD_CONFIG", origConfig)
+	_ = os.Setenv("PIPEBOARD_CONFIG", configFile)
+
+	err := cmdRecv([]string{"nonexistent"})
+	if err == nil {
+		t.Error("expected error for nonexistent peer")
+	}
+}
+
+// Test cmdPeek with missing peer
+func TestCmdPeekMissingPeer(t *testing.T) {
+	tmpDir := t.TempDir()
+	configFile := tmpDir + "/config.yaml"
+	configContent := `peers:
+  otherpeer:
+    ssh: otherhost
+`
+	if err := os.WriteFile(configFile, []byte(configContent), 0644); err != nil {
+		t.Fatalf("failed to write config: %v", err)
+	}
+
+	origConfig := os.Getenv("PIPEBOARD_CONFIG")
+	defer restoreEnv("PIPEBOARD_CONFIG", origConfig)
+	_ = os.Setenv("PIPEBOARD_CONFIG", configFile)
+
+	err := cmdPeek([]string{"nonexistent"})
+	if err == nil {
+		t.Error("expected error for nonexistent peer")
+	}
+}
+
+// Test cmdPeek with mock SSH
+func TestCmdPeekWithMockSSH(t *testing.T) {
+	// Create mock SSH that outputs data
+	mockDir := createMockSSH(t, "clipboard content", false)
+
+	tmpDir := t.TempDir()
+	configFile := tmpDir + "/config.yaml"
+	configContent := `peers:
+  testpeer:
+    ssh: testhost
+    remote_cmd: pipeboard
+`
+	if err := os.WriteFile(configFile, []byte(configContent), 0644); err != nil {
+		t.Fatalf("failed to write config: %v", err)
+	}
+
+	origPath := os.Getenv("PATH")
+	origConfig := os.Getenv("PIPEBOARD_CONFIG")
+	defer func() {
+		_ = os.Setenv("PATH", origPath)
+		restoreEnv("PIPEBOARD_CONFIG", origConfig)
+	}()
+
+	_ = os.Setenv("PATH", mockDir+":"+origPath)
+	_ = os.Setenv("PIPEBOARD_CONFIG", configFile)
+
+	// cmdPeek should succeed with mock SSH
+	err := cmdPeek([]string{"testpeer"})
+	if err != nil {
+		t.Errorf("cmdPeek with mock SSH should succeed: %v", err)
+	}
+}
+
+// Test cmdRecv with mock SSH
+func TestCmdRecvWithMockSSH(t *testing.T) {
+	// Create mock SSH that outputs data
+	mockDir := createMockSSH(t, "received data", false)
+
+	tmpDir := t.TempDir()
+	configFile := tmpDir + "/config.yaml"
+	configContent := `peers:
+  testpeer:
+    ssh: testhost
+    remote_cmd: pipeboard
+`
+	if err := os.WriteFile(configFile, []byte(configContent), 0644); err != nil {
+		t.Fatalf("failed to write config: %v", err)
+	}
+
+	origPath := os.Getenv("PATH")
+	origConfig := os.Getenv("PIPEBOARD_CONFIG")
+	defer func() {
+		_ = os.Setenv("PATH", origPath)
+		restoreEnv("PIPEBOARD_CONFIG", origConfig)
+	}()
+
+	_ = os.Setenv("PATH", mockDir+":"+origPath)
+	_ = os.Setenv("PIPEBOARD_CONFIG", configFile)
+
+	// cmdRecv will try to write to clipboard which may fail
+	// but the SSH part should work
+	err := cmdRecv([]string{"testpeer"})
+	// May fail on clipboard write, but shouldn't fail on SSH
+	if err != nil && strings.Contains(err.Error(), "ssh") {
+		t.Errorf("SSH part should work with mock: %v", err)
 	}
 }

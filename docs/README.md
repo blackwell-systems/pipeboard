@@ -96,3 +96,7 @@ sudo mv pipeboard /usr/local/bin/
 - [Commands](commands.md) — Full command reference
 - [Transforms](transforms.md) — Build your own clipboard pipelines
 - [Configuration](configuration.md) — Config file reference
+
+---
+
+pipeboard™ is a product of Blackwell Systems™.
