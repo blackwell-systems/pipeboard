@@ -69,6 +69,8 @@ func newRemoteBackendFromConfig() (RemoteBackend, error) {
 	switch cfg.Sync.Backend {
 	case "s3":
 		return newS3Backend(cfg.Sync.S3, cfg.Sync.Encryption, cfg.Sync.Passphrase, cfg.Sync.TTLDays)
+	case "local":
+		return newLocalBackend(cfg.Sync.Local, cfg.Sync.Encryption, cfg.Sync.Passphrase, cfg.Sync.TTLDays)
 	default:
 		return nil, fmt.Errorf("unsupported backend: %s", cfg.Sync.Backend)
 	}
