@@ -23,3 +23,5 @@ curl -sSL https://raw.githubusercontent.com/blackwell-systems/pipeboard/main/ins
 
 [GitHub](https://github.com/blackwell-systems/pipeboard)
 [Get Started](#pipeboard)
+
+![color](#4a9eff)
