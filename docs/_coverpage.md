@@ -18,7 +18,7 @@ go install github.com/blackwell-systems/pipeboard@latest
 ```
 
 ```bash
-curl -sSL https://pipeboard.dev/install.sh | sh
+curl -sSL https://raw.githubusercontent.com/blackwell-systems/pipeboard/main/install.sh | sh
 ```
 
 [GitHub](https://github.com/blackwell-systems/pipeboard)
