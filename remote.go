@@ -24,10 +24,12 @@ import (
 type SlotPayload struct {
 	Version   int    `json:"version"`
 	CreatedAt string `json:"created_at"`
+	ExpiresAt string `json:"expires_at,omitempty"` // RFC3339 timestamp for TTL
 	Hostname  string `json:"hostname"`
 	OS        string `json:"os"`
 	Len       int    `json:"len"`
 	MIME      string `json:"mime"`
+	Encrypted bool   `json:"encrypted,omitempty"` // true if data is client-side encrypted
 	DataB64   string `json:"data_b64"`
 }
 
@@ -49,10 +51,13 @@ type RemoteBackend interface {
 
 // S3Backend implements RemoteBackend using AWS S3
 type S3Backend struct {
-	client *s3.Client
-	bucket string
-	prefix string
-	sse    string
+	client     *s3.Client
+	bucket     string
+	prefix     string
+	sse        string
+	encryption string // "none" or "aes256" for client-side encryption
+	passphrase string // passphrase for client-side encryption
+	ttlDays    int    // TTL in days (0 = never expires)
 }
 
 func newRemoteBackendFromConfig() (RemoteBackend, error) {
@@ -63,14 +68,19 @@ func newRemoteBackendFromConfig() (RemoteBackend, error) {
 
 	switch cfg.Sync.Backend {
 	case "s3":
-		return newS3Backend(cfg.Sync.S3)
+		return newS3Backend(cfg.Sync.S3, cfg.Sync.Encryption, cfg.Sync.Passphrase, cfg.Sync.TTLDays)
 	default:
 		return nil, fmt.Errorf("unsupported backend: %s", cfg.Sync.Backend)
 	}
 }
 
-func newS3Backend(cfg *S3Config) (*S3Backend, error) {
+func newS3Backend(cfg *S3Config, encryption, passphrase string, ttlDays int) (*S3Backend, error) {
 	ctx := context.Background()
+
+	// Validate encryption config
+	if encryption == "aes256" && passphrase == "" {
+		return nil, fmt.Errorf("passphrase required when encryption is set to aes256")
+	}
 
 	var awsCfg aws.Config
 	var err error
@@ -102,10 +112,13 @@ func newS3Backend(cfg *S3Config) (*S3Backend, error) {
 	client := s3.NewFromConfig(awsCfg)
 
 	return &S3Backend{
-		client: client,
-		bucket: cfg.Bucket,
-		prefix: cfg.Prefix,
-		sse:    cfg.SSE,
+		client:     client,
+		bucket:     cfg.Bucket,
+		prefix:     cfg.Prefix,
+		sse:        cfg.SSE,
+		encryption: encryption,
+		passphrase: passphrase,
+		ttlDays:    ttlDays,
 	}, nil
 }
 
@@ -119,14 +132,32 @@ func (b *S3Backend) Push(slot string, data []byte, meta map[string]string) error
 		hostname, _ = os.Hostname()
 	}
 
+	// Apply client-side encryption if configured
+	storeData := data
+	encrypted := false
+	if b.encryption == "aes256" && b.passphrase != "" {
+		encData, err := encrypt(data, b.passphrase)
+		if err != nil {
+			return fmt.Errorf("encrypting data: %w", err)
+		}
+		storeData = encData
+		encrypted = true
+	}
+
 	payload := SlotPayload{
 		Version:   1,
 		CreatedAt: time.Now().UTC().Format(time.RFC3339),
 		Hostname:  hostname,
 		OS:        runtime.GOOS,
-		Len:       len(data),
+		Len:       len(data), // Original length before encryption
 		MIME:      "text/plain; charset=utf-8",
-		DataB64:   base64.StdEncoding.EncodeToString(data),
+		Encrypted: encrypted,
+		DataB64:   base64.StdEncoding.EncodeToString(storeData),
+	}
+
+	// Set expiry time if TTL configured
+	if b.ttlDays > 0 {
+		payload.ExpiresAt = time.Now().UTC().AddDate(0, 0, b.ttlDays).Format(time.RFC3339)
 	}
 
 	jsonData, err := json.Marshal(payload)
@@ -180,9 +211,31 @@ func (b *S3Backend) Pull(slot string) ([]byte, map[string]string, error) {
 		return nil, nil, fmt.Errorf("decoding payload: %w", err)
 	}
 
+	// Check if slot has expired
+	if payload.ExpiresAt != "" {
+		expiresAt, err := time.Parse(time.RFC3339, payload.ExpiresAt)
+		if err == nil && time.Now().UTC().After(expiresAt) {
+			// Auto-delete expired slot
+			_ = b.Delete(slot)
+			return nil, nil, fmt.Errorf("slot %q has expired", slot)
+		}
+	}
+
 	data, err := base64.StdEncoding.DecodeString(payload.DataB64)
 	if err != nil {
 		return nil, nil, fmt.Errorf("decoding base64 data: %w", err)
+	}
+
+	// Decrypt if the payload was encrypted
+	if payload.Encrypted {
+		if b.passphrase == "" {
+			return nil, nil, fmt.Errorf("slot is encrypted but no passphrase configured")
+		}
+		decData, err := decrypt(data, b.passphrase)
+		if err != nil {
+			return nil, nil, fmt.Errorf("decrypting data: %w", err)
+		}
+		data = decData
 	}
 
 	meta := map[string]string{

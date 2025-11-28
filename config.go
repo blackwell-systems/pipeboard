@@ -9,18 +9,26 @@ import (
 )
 
 type Config struct {
-	Version int                   `yaml:"version"`
-	Sync    *SyncConfig           `yaml:"sync,omitempty"`
-	Peers   map[string]PeerConfig `yaml:"peers,omitempty"`
+	Version  int                   `yaml:"version"`
+	Defaults *DefaultsConfig       `yaml:"defaults,omitempty"`
+	Sync     *SyncConfig           `yaml:"sync,omitempty"`
+	Peers    map[string]PeerConfig `yaml:"peers,omitempty"`
 
 	// Legacy fields for backwards compatibility
 	Backend string    `yaml:"backend,omitempty"`
 	S3      *S3Config `yaml:"s3,omitempty"`
 }
 
+type DefaultsConfig struct {
+	Peer string `yaml:"peer,omitempty"` // default peer for send/recv/peek
+}
+
 type SyncConfig struct {
-	Backend string    `yaml:"backend"` // "none" or "s3"
-	S3      *S3Config `yaml:"s3,omitempty"`
+	Backend    string    `yaml:"backend"`              // "none" or "s3"
+	S3         *S3Config `yaml:"s3,omitempty"`
+	Encryption string    `yaml:"encryption,omitempty"` // "none" or "aes256"
+	Passphrase string    `yaml:"passphrase,omitempty"` // for client-side encryption
+	TTLDays    int       `yaml:"ttl_days,omitempty"`   // auto-expire slots after N days (0 = never)
 }
 
 type S3Config struct {
@@ -235,4 +243,12 @@ func (cfg *Config) getPeer(name string) (PeerConfig, error) {
 		peer.RemoteCmd = "pipeboard"
 	}
 	return peer, nil
+}
+
+// getDefaultPeer returns the default peer name from config, or error if not set.
+func (cfg *Config) getDefaultPeer() (string, error) {
+	if cfg.Defaults == nil || cfg.Defaults.Peer == "" {
+		return "", fmt.Errorf("no default peer configured; set 'defaults.peer' in config or specify a peer name")
+	}
+	return cfg.Defaults.Peer, nil
 }

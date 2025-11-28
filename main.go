@@ -2,13 +2,16 @@ package main
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"runtime"
 	"strings"
+	"time"
 )
 
 type BackendKind string
@@ -56,6 +59,7 @@ func main() {
 		"recv":    cmdRecv,
 		"receive": cmdRecv,
 		"peek":    cmdPeek,
+		"history": cmdHistory,
 	}
 
 	if fn, ok := commands[cmd]; ok {
@@ -69,7 +73,7 @@ func main() {
 	case "help", "-h", "--help":
 		printHelp()
 	case "version", "-v", "--version":
-		fmt.Println("pipeboard v0.3.0")
+		fmt.Println("pipeboard v0.2.0")
 	default:
 		fmt.Fprintf(os.Stderr, "Unknown command: %s\n\n", cmd)
 		printHelp()
@@ -91,9 +95,10 @@ Local clipboard:
   doctor               Run environment checks
 
 Direct peer-to-peer (SSH):
-  send <peer>          Send local clipboard to peer's clipboard
-  recv <peer>          Receive peer's clipboard into local clipboard
-  peek <peer>          Print peer's clipboard to stdout (no local change)
+  send [peer]          Send local clipboard to peer's clipboard
+  recv [peer]          Receive peer's clipboard into local clipboard
+  peek [peer]          Print peer's clipboard to stdout (no local change)
+                       (peer defaults to 'defaults.peer' in config)
 
 Remote slots (optional sync backend):
   push <name>          Push clipboard to remote slot
@@ -101,6 +106,7 @@ Remote slots (optional sync backend):
   show <name>          Print remote slot to stdout
   slots                List remote slots
   rm <name>            Delete remote slot
+  history              Show recent operations
 
 Other:
   help                 Show this help
@@ -108,12 +114,18 @@ Other:
 
 Config: ~/.config/pipeboard/config.yaml
 
+  defaults:
+    peer: dev              # default peer for send/recv/peek
+
   peers:
     dev:
       ssh: devbox
 
   sync:
     backend: s3
+    encryption: aes256     # client-side encryption (optional)
+    passphrase: secret     # encryption passphrase
+    ttl_days: 30           # auto-expire slots (optional)
     s3:
       bucket: my-bucket
       region: us-west-2
@@ -121,8 +133,8 @@ Config: ~/.config/pipeboard/config.yaml
 Examples:
   echo "hello" | pipeboard copy
   pipeboard paste | jq .
+  pipeboard send                    # uses default peer
   pipeboard send dev
-  pipeboard recv dev
   pipeboard push kube && ssh server "pipeboard pull kube"`)
 }
 
@@ -495,6 +507,7 @@ func cmdPush(args []string) error {
 	}
 
 	fmt.Printf("pushed %s to slot %q\n", formatSize(int64(len(data))), slot)
+	recordHistory("push", slot, int64(len(data)))
 	return nil
 }
 
@@ -524,6 +537,7 @@ func cmdPull(args []string) error {
 	} else {
 		fmt.Printf("pulled %s from slot %q\n", formatSize(int64(len(data))), slot)
 	}
+	recordHistory("pull", slot, int64(len(data)))
 	return nil
 }
 
@@ -602,14 +616,21 @@ func cmdRm(args []string) error {
 }
 
 func cmdSend(args []string) error {
-	if len(args) != 1 {
-		return fmt.Errorf("usage: pipeboard send <peer>")
-	}
-	peerName := args[0]
-
 	cfg, err := loadConfigForPeers()
 	if err != nil {
 		return err
+	}
+
+	var peerName string
+	if len(args) == 0 {
+		peerName, err = cfg.getDefaultPeer()
+		if err != nil {
+			return fmt.Errorf("usage: pipeboard send [peer]\n%w", err)
+		}
+	} else if len(args) == 1 {
+		peerName = args[0]
+	} else {
+		return fmt.Errorf("usage: pipeboard send [peer]")
 	}
 
 	peer, err := cfg.getPeer(peerName)
@@ -635,18 +656,26 @@ func cmdSend(args []string) error {
 	}
 
 	fmt.Printf("sent %s to peer %q (%s)\n", formatSize(int64(len(data))), peerName, sshTarget)
+	recordHistory("send", peerName, int64(len(data)))
 	return nil
 }
 
 func cmdRecv(args []string) error {
-	if len(args) != 1 {
-		return fmt.Errorf("usage: pipeboard recv <peer>")
-	}
-	peerName := args[0]
-
 	cfg, err := loadConfigForPeers()
 	if err != nil {
 		return err
+	}
+
+	var peerName string
+	if len(args) == 0 {
+		peerName, err = cfg.getDefaultPeer()
+		if err != nil {
+			return fmt.Errorf("usage: pipeboard recv [peer]\n%w", err)
+		}
+	} else if len(args) == 1 {
+		peerName = args[0]
+	} else {
+		return fmt.Errorf("usage: pipeboard recv [peer]")
 	}
 
 	peer, err := cfg.getPeer(peerName)
@@ -672,18 +701,26 @@ func cmdRecv(args []string) error {
 	}
 
 	fmt.Printf("received %s from peer %q (%s)\n", formatSize(int64(out.Len())), peerName, sshTarget)
+	recordHistory("recv", peerName, int64(out.Len()))
 	return nil
 }
 
 func cmdPeek(args []string) error {
-	if len(args) != 1 {
-		return fmt.Errorf("usage: pipeboard peek <peer>")
-	}
-	peerName := args[0]
-
 	cfg, err := loadConfigForPeers()
 	if err != nil {
 		return err
+	}
+
+	var peerName string
+	if len(args) == 0 {
+		peerName, err = cfg.getDefaultPeer()
+		if err != nil {
+			return fmt.Errorf("usage: pipeboard peek [peer]\n%w", err)
+		}
+	} else if len(args) == 1 {
+		peerName = args[0]
+	} else {
+		return fmt.Errorf("usage: pipeboard peek [peer]")
 	}
 
 	peer, err := cfg.getPeer(peerName)
@@ -703,5 +740,113 @@ func cmdPeek(args []string) error {
 		return fmt.Errorf("failed to peek from peer %q (%s): %w", peerName, sshTarget, err)
 	}
 
+	recordHistory("peek", peerName, 0)
+	return nil
+}
+
+// History types and functions
+
+type HistoryEntry struct {
+	Timestamp time.Time `json:"timestamp"`
+	Command   string    `json:"command"`
+	Target    string    `json:"target"`
+	Size      int64     `json:"size,omitempty"`
+}
+
+const maxHistoryEntries = 50
+
+func getHistoryPath() string {
+	configDir := os.Getenv("XDG_CONFIG_HOME")
+	if configDir == "" {
+		home, err := os.UserHomeDir()
+		if err != nil {
+			return ""
+		}
+		configDir = filepath.Join(home, ".config")
+	}
+	return filepath.Join(configDir, "pipeboard", "history.json")
+}
+
+func recordHistory(command, target string, size int64) {
+	path := getHistoryPath()
+	if path == "" {
+		return
+	}
+
+	// Ensure directory exists
+	dir := filepath.Dir(path)
+	if err := os.MkdirAll(dir, 0755); err != nil {
+		return
+	}
+
+	// Load existing history
+	var history []HistoryEntry
+	if data, err := os.ReadFile(path); err == nil {
+		_ = json.Unmarshal(data, &history)
+	}
+
+	// Add new entry
+	history = append(history, HistoryEntry{
+		Timestamp: time.Now(),
+		Command:   command,
+		Target:    target,
+		Size:      size,
+	})
+
+	// Trim to max entries
+	if len(history) > maxHistoryEntries {
+		history = history[len(history)-maxHistoryEntries:]
+	}
+
+	// Save
+	data, err := json.MarshalIndent(history, "", "  ")
+	if err != nil {
+		return
+	}
+	_ = os.WriteFile(path, data, 0600)
+}
+
+func cmdHistory(args []string) error {
+	if len(args) > 0 {
+		return errors.New("history does not take arguments")
+	}
+
+	path := getHistoryPath()
+	if path == "" {
+		return errors.New("could not determine history path")
+	}
+
+	data, err := os.ReadFile(path)
+	if err != nil {
+		if os.IsNotExist(err) {
+			fmt.Println("No history yet.")
+			return nil
+		}
+		return err
+	}
+
+	var history []HistoryEntry
+	if err := json.Unmarshal(data, &history); err != nil {
+		return err
+	}
+
+	if len(history) == 0 {
+		fmt.Println("No history yet.")
+		return nil
+	}
+
+	fmt.Printf("%-20s  %-8s  %-15s  %s\n", "TIME", "COMMAND", "TARGET", "SIZE")
+	for _, h := range history {
+		sizeStr := ""
+		if h.Size > 0 {
+			sizeStr = formatSize(h.Size)
+		}
+		fmt.Printf("%-20s  %-8s  %-15s  %s\n",
+			h.Timestamp.Format("2006-01-02 15:04:05"),
+			h.Command,
+			h.Target,
+			sizeStr,
+		)
+	}
 	return nil
 }
