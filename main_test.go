@@ -1490,3 +1490,309 @@ func TestGetCommandCmd(t *testing.T) {
 		t.Errorf("cmd mismatch: %v", cmd)
 	}
 }
+
+// Test newS3Backend validation
+func TestNewS3BackendMissingPassphrase(t *testing.T) {
+	cfg := &S3Config{
+		Bucket: "test-bucket",
+		Region: "us-west-2",
+	}
+	_, err := newS3Backend(cfg, "aes256", "", 30)
+	if err == nil {
+		t.Error("expected error for missing passphrase with aes256")
+	}
+	if !strings.Contains(err.Error(), "passphrase required") {
+		t.Errorf("error should mention passphrase required: %v", err)
+	}
+}
+
+// Test slot commands with no sync config
+func TestCmdPushNoSyncConfig(t *testing.T) {
+	tmpDir := t.TempDir()
+	configFile := tmpDir + "/config.yaml"
+	configContent := `version: 1`
+	if err := os.WriteFile(configFile, []byte(configContent), 0644); err != nil {
+		t.Fatalf("failed to write config: %v", err)
+	}
+
+	origConfig := os.Getenv("PIPEBOARD_CONFIG")
+	defer restoreEnv("PIPEBOARD_CONFIG", origConfig)
+	_ = os.Setenv("PIPEBOARD_CONFIG", configFile)
+
+	err := cmdPush([]string{"testslot"})
+	if err == nil {
+		t.Error("expected error for missing sync config")
+	}
+}
+
+// Test cmdPull with no sync config
+func TestCmdPullNoSyncConfig(t *testing.T) {
+	tmpDir := t.TempDir()
+	configFile := tmpDir + "/config.yaml"
+	configContent := `version: 1`
+	if err := os.WriteFile(configFile, []byte(configContent), 0644); err != nil {
+		t.Fatalf("failed to write config: %v", err)
+	}
+
+	origConfig := os.Getenv("PIPEBOARD_CONFIG")
+	defer restoreEnv("PIPEBOARD_CONFIG", origConfig)
+	_ = os.Setenv("PIPEBOARD_CONFIG", configFile)
+
+	err := cmdPull([]string{"testslot"})
+	if err == nil {
+		t.Error("expected error for missing sync config")
+	}
+}
+
+// Test cmdShow with no sync config
+func TestCmdShowNoSyncConfig(t *testing.T) {
+	tmpDir := t.TempDir()
+	configFile := tmpDir + "/config.yaml"
+	configContent := `version: 1`
+	if err := os.WriteFile(configFile, []byte(configContent), 0644); err != nil {
+		t.Fatalf("failed to write config: %v", err)
+	}
+
+	origConfig := os.Getenv("PIPEBOARD_CONFIG")
+	defer restoreEnv("PIPEBOARD_CONFIG", origConfig)
+	_ = os.Setenv("PIPEBOARD_CONFIG", configFile)
+
+	err := cmdShow([]string{"testslot"})
+	if err == nil {
+		t.Error("expected error for missing sync config")
+	}
+}
+
+// Test cmdSlots with no sync config
+func TestCmdSlotsNoSyncConfig(t *testing.T) {
+	tmpDir := t.TempDir()
+	configFile := tmpDir + "/config.yaml"
+	configContent := `version: 1`
+	if err := os.WriteFile(configFile, []byte(configContent), 0644); err != nil {
+		t.Fatalf("failed to write config: %v", err)
+	}
+
+	origConfig := os.Getenv("PIPEBOARD_CONFIG")
+	defer restoreEnv("PIPEBOARD_CONFIG", origConfig)
+	_ = os.Setenv("PIPEBOARD_CONFIG", configFile)
+
+	err := cmdSlots([]string{})
+	if err == nil {
+		t.Error("expected error for missing sync config")
+	}
+}
+
+// Test cmdRm with no sync config
+func TestCmdRmNoSyncConfig(t *testing.T) {
+	tmpDir := t.TempDir()
+	configFile := tmpDir + "/config.yaml"
+	configContent := `version: 1`
+	if err := os.WriteFile(configFile, []byte(configContent), 0644); err != nil {
+		t.Fatalf("failed to write config: %v", err)
+	}
+
+	origConfig := os.Getenv("PIPEBOARD_CONFIG")
+	defer restoreEnv("PIPEBOARD_CONFIG", origConfig)
+	_ = os.Setenv("PIPEBOARD_CONFIG", configFile)
+
+	err := cmdRm([]string{"testslot"})
+	if err == nil {
+		t.Error("expected error for missing sync config")
+	}
+}
+
+// Test encrypt/decrypt roundtrip
+func TestEncryptDecryptRoundtrip(t *testing.T) {
+	passphrase := "test-passphrase-123"
+	original := []byte("hello world, this is secret data!")
+
+	encrypted, err := encrypt(original, passphrase)
+	if err != nil {
+		t.Fatalf("encrypt failed: %v", err)
+	}
+
+	if bytes.Equal(encrypted, original) {
+		t.Error("encrypted data should differ from original")
+	}
+
+	decrypted, err := decrypt(encrypted, passphrase)
+	if err != nil {
+		t.Fatalf("decrypt failed: %v", err)
+	}
+
+	if !bytes.Equal(decrypted, original) {
+		t.Errorf("decrypted data should match original: got %q, want %q", decrypted, original)
+	}
+}
+
+// Test decrypt with wrong passphrase (additional test)
+func TestDecryptWrongPassphraseExtra(t *testing.T) {
+	passphrase := "correct-passphrase-extra"
+	wrongPassphrase := "wrong-passphrase-extra"
+	original := []byte("secret data for extra test")
+
+	encrypted, err := encrypt(original, passphrase)
+	if err != nil {
+		t.Fatalf("encrypt failed: %v", err)
+	}
+
+	_, err = decrypt(encrypted, wrongPassphrase)
+	if err == nil {
+		t.Error("expected error for wrong passphrase")
+	}
+}
+
+// Test decrypt with invalid data
+func TestDecryptInvalidData(t *testing.T) {
+	_, err := decrypt([]byte("too short"), "passphrase")
+	if err == nil {
+		t.Error("expected error for data too short")
+	}
+}
+
+// Test cmdSend with too many args
+func TestCmdSendTooManyArgsDetailed(t *testing.T) {
+	err := cmdSend([]string{"peer1", "peer2", "peer3"})
+	if err == nil {
+		t.Error("expected error for too many args")
+	}
+}
+
+// Test cmdRecv with too many args
+func TestCmdRecvTooManyArgsDetailed(t *testing.T) {
+	err := cmdRecv([]string{"peer1", "peer2"})
+	if err == nil {
+		t.Error("expected error for too many args")
+	}
+}
+
+// Test cmdPeek with too many args
+func TestCmdPeekTooManyArgsDetailed(t *testing.T) {
+	err := cmdPeek([]string{"peer1", "peer2"})
+	if err == nil {
+		t.Error("expected error for too many args")
+	}
+}
+
+// Test configPath with XDG_CONFIG_HOME
+func TestConfigPathXDG(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	origXDG := os.Getenv("XDG_CONFIG_HOME")
+	origConfig := os.Getenv("PIPEBOARD_CONFIG")
+	defer func() {
+		restoreEnv("XDG_CONFIG_HOME", origXDG)
+		restoreEnv("PIPEBOARD_CONFIG", origConfig)
+	}()
+
+	_ = os.Unsetenv("PIPEBOARD_CONFIG")
+	_ = os.Setenv("XDG_CONFIG_HOME", tmpDir)
+
+	path := configPath()
+	if !strings.Contains(path, tmpDir) {
+		t.Errorf("config path should use XDG_CONFIG_HOME: %s", path)
+	}
+}
+
+// Test printHelp doesn't panic
+func TestPrintHelpNoPanic(t *testing.T) {
+	// Just verify it doesn't panic
+	printHelp()
+}
+
+// Test cmdHistory with no history file
+func TestCmdHistoryNoFile(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	origHome := os.Getenv("HOME")
+	defer restoreEnv("HOME", origHome)
+	_ = os.Setenv("HOME", tmpDir)
+
+	// Should not error, just show empty
+	err := cmdHistory([]string{})
+	if err != nil {
+		t.Errorf("cmdHistory should handle missing file: %v", err)
+	}
+}
+
+// Test loadConfig with invalid YAML
+func TestLoadConfigInvalidYAML(t *testing.T) {
+	tmpDir := t.TempDir()
+	configFile := tmpDir + "/config.yaml"
+	// Invalid YAML
+	configContent := `{{{invalid yaml`
+	if err := os.WriteFile(configFile, []byte(configContent), 0644); err != nil {
+		t.Fatalf("failed to write config: %v", err)
+	}
+
+	origConfig := os.Getenv("PIPEBOARD_CONFIG")
+	defer restoreEnv("PIPEBOARD_CONFIG", origConfig)
+	_ = os.Setenv("PIPEBOARD_CONFIG", configFile)
+
+	_, err := loadConfig()
+	if err == nil {
+		t.Error("expected error for invalid YAML")
+	}
+}
+
+// Test deriveKey produces consistent results
+func TestDeriveKeyConsistent(t *testing.T) {
+	passphrase := "test-passphrase"
+	salt := []byte("test-salt-12345!")
+	key1 := deriveKey(passphrase, salt)
+	key2 := deriveKey(passphrase, salt)
+
+	if !bytes.Equal(key1, key2) {
+		t.Error("deriveKey should produce consistent results")
+	}
+
+	if len(key1) != 32 {
+		t.Errorf("key should be 32 bytes, got %d", len(key1))
+	}
+}
+
+// Test formatSize edge cases
+func TestFormatSizeMoreEdgeCases(t *testing.T) {
+	tests := []struct {
+		size   int64
+		expect string
+	}{
+		{1024 * 1024 * 1024 * 10, "10.0 GiB"},
+		{1024 * 1024 * 500, "500.0 MiB"},
+	}
+	for _, tc := range tests {
+		result := formatSize(tc.size)
+		if result != tc.expect {
+			t.Errorf("formatSize(%d) = %q, want %q", tc.size, result, tc.expect)
+		}
+	}
+}
+
+// Test cmdDoctor output
+func TestCmdDoctorOutput(t *testing.T) {
+	err := cmdDoctor([]string{})
+	// Should not error even if tools are missing
+	if err != nil {
+		t.Errorf("cmdDoctor should not error: %v", err)
+	}
+}
+
+// Test SlotPayload struct
+func TestSlotPayloadStruct(t *testing.T) {
+	payload := SlotPayload{
+		Version:   1,
+		CreatedAt: time.Now().Format(time.RFC3339),
+		Hostname:  "testhost",
+		OS:        "linux",
+		Len:       100,
+		MIME:      "text/plain",
+		DataB64:   "dGVzdCBkYXRh", // base64 of "test data"
+	}
+
+	if payload.Version != 1 {
+		t.Error("Version should be 1")
+	}
+	if payload.Hostname != "testhost" {
+		t.Error("Hostname mismatch")
+	}
+}
