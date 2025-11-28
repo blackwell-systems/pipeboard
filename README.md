@@ -8,7 +8,7 @@
 
 **The programmable clipboard router for terminals.**
 
-One command across macOS, Linux, and WSL. Sync between machines via SSH. Store snippets in S3. Transform clipboard contents with user-defined pipelines.
+One command across macOS, Linux, Windows, and WSL. Sync between machines via SSH. Store snippets in S3. Transform clipboard contents with user-defined pipelines.
 
 ## Installation
 
@@ -57,7 +57,7 @@ pipeboard keeps everything in the terminal:
 | Screenshot to clipboard | Platform-specific tools | `pipeboard paste --image > out.png` |
 
 **Four pillars:**
-1. **Unified clipboard** — One CLI, every platform (macOS, Wayland, X11, WSL)
+1. **Unified clipboard** — One CLI, every platform (macOS, Linux, Windows, WSL)
 2. **SSH peer sync** — Direct machine-to-machine transfer, no cloud required
 3. **S3 remote slots** — Named, persistent storage for async workflows
 4. **Programmable transforms** — User-defined pipelines to process clipboard in-place
