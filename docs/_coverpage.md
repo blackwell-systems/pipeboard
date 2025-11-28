@@ -16,7 +16,7 @@ go install github.com/blackwell-systems/pipeboard@latest
 curl -sSL https://raw.githubusercontent.com/blackwell-systems/pipeboard/main/install.sh | sh
 ```
 
-- One command across macOS, Linux, and WSL
+- One command across macOS, Linux, Windows, and WSL
 - Sync between machines via SSH
 - Store snippets in S3 with encryption
 - Transform clipboard with user-defined pipelines

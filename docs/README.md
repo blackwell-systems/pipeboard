@@ -2,7 +2,7 @@
 
 **The programmable clipboard router for terminals.**
 
-One command across macOS, Linux, and WSL. Sync between machines via SSH. Store snippets in S3. Transform clipboard contents with user-defined pipelines.
+One command across macOS, Linux, Windows, and WSL. Sync between machines via SSH. Store snippets in S3. Transform clipboard contents with user-defined pipelines.
 
 ## Why pipeboard?
 
