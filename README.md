@@ -6,7 +6,9 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 [![Release](https://img.shields.io/github/v/release/blackwell-systems/pipeboard)](https://github.com/blackwell-systems/pipeboard/releases)
 
-A tiny cross-platform clipboard CLI with peer-to-peer SSH sync and optional S3 remote slots.
+**The programmable clipboard router for terminals.**
+
+One command across macOS, Linux, and WSL. Sync between machines via SSH. Store snippets in S3. Transform clipboard contents with user-defined pipelines.
 
 ## Installation
 
@@ -41,12 +43,24 @@ cd pipeboard && go build
 
 ## Why pipeboard?
 
-| Problem | Without pipeboard | With pipeboard |
-|---------|-------------------|----------------|
-| Different clipboard tools per OS | `pbcopy` on Mac, `xclip` on Linux, `clip.exe` on WSL | `pipeboard copy/paste` everywhere |
-| Copy between machines | Manual SSH, scp, or shared files | `pipeboard send dev` |
-| Persistent clipboard across reboots | Not possible | `pipeboard push/pull` via S3 |
-| Share config snippets async | Slack/email yourself | `pipeboard push kube` on laptop, `pipeboard pull kube` on server |
+**Stop context-switching.** Terminal users copy and paste hundreds of times a day—config snippets, JSON payloads, API keys, log excerpts. Each time you reach for a GUI or email yourself a snippet, you break flow.
+
+pipeboard keeps everything in the terminal:
+
+| Workflow | Without pipeboard | With pipeboard |
+|----------|-------------------|----------------|
+| Cross-platform scripts | `pbcopy` on Mac, `xclip` on Linux, `clip.exe` on WSL | `pipeboard copy` everywhere |
+| Send clipboard to another machine | SSH, scp, or paste into Slack | `pipeboard send dev` |
+| Grab that config you saved yesterday | Scroll through chat history | `pipeboard pull kube` |
+| Format JSON before pasting into docs | Copy → browser → jsonformatter.org → copy | `pipeboard fx pretty-json` |
+| Redact secrets before sharing with LLMs | Manual find-and-replace | `pipeboard fx redact-secrets` |
+| Screenshot to clipboard | Platform-specific tools | `pipeboard paste --image > out.png` |
+
+**Four pillars:**
+1. **Unified clipboard** — One CLI, every platform (macOS, Wayland, X11, WSL)
+2. **SSH peer sync** — Direct machine-to-machine transfer, no cloud required
+3. **S3 remote slots** — Named, persistent storage for async workflows
+4. **Programmable transforms** — User-defined pipelines to process clipboard in-place
 
 ## Usage
 
@@ -68,6 +82,10 @@ pipeboard paste | jq .
 # Clear clipboard
 pipeboard clear
 
+# Copy/paste images (PNG)
+cat screenshot.png | pipeboard copy --image
+pipeboard paste --image > clipboard.png
+
 # Check detected backend
 pipeboard backend
 
@@ -75,9 +93,58 @@ pipeboard backend
 pipeboard doctor
 ```
 
-### Direct Peer-to-Peer (SSH)
+### Transforms (fx)
 
-Send clipboard contents directly between machines via SSH:
+Define transforms in your config, then process clipboard contents in-place:
+
+```bash
+# Format JSON in clipboard
+pipeboard fx pretty-json
+
+# Redact secrets before pasting into ChatGPT
+pipeboard fx redact-secrets
+
+# Preview without modifying clipboard
+pipeboard fx strip-ansi --dry-run
+
+# List available transforms
+pipeboard fx --list
+```
+
+Transforms are defined in your config with either `cmd` (array) or `shell` (string) syntax:
+
+```yaml
+fx:
+  pretty-json:
+    cmd: ["jq", "."]
+    description: "Format JSON"
+
+  strip-ansi:
+    shell: "sed 's/\\x1b\\[[0-9;]*m//g'"
+    description: "Remove ANSI escape codes"
+
+  redact-secrets:
+    shell: "sed -E 's/(AKIA[0-9A-Z]{16}|sk-[a-zA-Z0-9]{48})/<REDACTED>/g'"
+    description: "Redact AWS keys and OpenAI tokens"
+
+  yaml-to-json:
+    cmd: ["yq", "-o", "json"]
+    description: "Convert YAML to JSON"
+
+  base64-decode:
+    cmd: ["base64", "-d"]
+    description: "Decode base64"
+
+  sort-lines:
+    shell: "sort | uniq"
+    description: "Sort and deduplicate lines"
+```
+
+**Why this matters:** Every day you copy JSON that needs formatting, logs with ANSI codes, configs with secrets you need to redact before sharing. Instead of context-switching to browser tools or writing one-off scripts, define the transform once and run it forever.
+
+### Peer-to-Peer Sync (SSH)
+
+Send clipboard directly between machines over SSH—no cloud, no intermediary:
 
 ```bash
 # Send local clipboard to peer's clipboard
@@ -90,22 +157,19 @@ pipeboard recv dev
 pipeboard peek dev
 ```
 
-**Example workflow:**
+Requires pipeboard installed on both machines. Peers are defined in config:
 
-```bash
-# On laptop: send to devbox
-pipeboard send dev
-
-# On laptop: receive from devbox
-pipeboard recv dev
-
-# On laptop: peek at devbox clipboard
-pipeboard peek dev | head
+```yaml
+peers:
+  dev:
+    ssh: devbox              # SSH host/alias from ~/.ssh/config
+  mac:
+    ssh: dayna-mac.local
 ```
 
 ### Remote Slots (S3)
 
-Store clipboard contents in named slots for async access:
+Named, persistent clipboard storage for async workflows:
 
 ```bash
 # Push local clipboard to a named slot
@@ -124,17 +188,19 @@ pipeboard slots
 pipeboard rm myslot
 ```
 
-**Example workflow:**
+**Example:** Share a kubeconfig between laptop and server.
 
 ```bash
 # On laptop
 cat ~/.kube/config | pipeboard copy
 pipeboard push kube
 
-# On server
+# On server (hours later)
 pipeboard pull kube
 pipeboard paste > ~/.kube/config
 ```
+
+Features: client-side AES-256-GCM encryption, configurable TTL/expiry, server-side encryption (SSE).
 
 **Tip:** Add an alias for convenience:
 
@@ -149,32 +215,31 @@ Config file: `~/.config/pipeboard/config.yaml`
 ```yaml
 version: 1
 
-# Default settings
 defaults:
-  peer: dev                  # default peer for send/recv/peek (optional)
+  peer: dev                  # default for send/recv/peek
 
-# Direct peer-to-peer via SSH
 peers:
   dev:
-    ssh: devbox              # SSH host/alias from ~/.ssh/config
-    remote_cmd: pipeboard    # optional, default: pipeboard
+    ssh: devbox              # SSH host from ~/.ssh/config
   mac:
     ssh: dayna-mac.local
-  wsl:
-    ssh: wsl-host
 
-# Optional remote sync backend
+fx:
+  pretty-json:
+    cmd: ["jq", "."]
+  redact-secrets:
+    shell: "sed -E 's/AKIA[0-9A-Z]{16}/<REDACTED>/g'"
+
 sync:
-  backend: s3                # or "none"
-  encryption: aes256         # optional: client-side encryption
-  passphrase: your-secret    # required if encryption is aes256
-  ttl_days: 30               # optional: auto-expire slots after N days
+  backend: s3
+  encryption: aes256         # client-side AES-256-GCM
+  passphrase: ${PIPEBOARD_PASSPHRASE}
+  ttl_days: 30               # auto-expire after 30 days
   s3:
-    bucket: your-bucket-name
+    bucket: my-pipeboard
     region: us-west-2
-    prefix: username/slots/  # optional
-    profile: pipeboard       # optional AWS profile
-    sse: AES256              # optional: AES256 or aws:kms (server-side)
+    prefix: clips/
+    sse: AES256              # server-side encryption
 ```
 
 ### Environment Variables
@@ -189,64 +254,59 @@ PIPEBOARD_S3_PROFILE       # AWS profile name
 PIPEBOARD_S3_SSE           # server-side encryption
 ```
 
-## Commands
+## Command Reference
 
+**Local clipboard:**
 | Command | Description |
 |---------|-------------|
-| `copy [text]` | Copy stdin or provided text to clipboard |
-| `paste` | Output clipboard contents to stdout |
-| `clear` | Clear the clipboard |
-| `backend` | Show detected clipboard backend |
-| `doctor` | Check dependencies and environment |
-| `send [peer]` | Send clipboard to peer via SSH (uses default if no peer) |
-| `recv [peer]` | Receive from peer via SSH (uses default if no peer) |
-| `peek [peer]` | Print peer's clipboard to stdout (uses default if no peer) |
-| `push <name>` | Push clipboard to remote slot |
-| `pull <name>` | Pull from remote slot to clipboard |
-| `show <name>` | Print remote slot to stdout |
-| `slots` | List remote slots |
-| `rm <name>` | Delete a remote slot |
+| `copy [text]` | Copy stdin or text to clipboard |
+| `copy --image` | Copy PNG from stdin |
+| `paste` | Output clipboard to stdout |
+| `paste --image` | Output clipboard image as PNG |
+| `clear` | Clear clipboard |
+| `backend` | Show detected backend |
+| `doctor` | Check environment |
+
+**Transforms:**
+| Command | Description |
+|---------|-------------|
+| `fx <name>` | Run transform in-place |
+| `fx <name> --dry-run` | Preview without modifying |
+| `fx --list` | List available transforms |
+
+**SSH peer sync:**
+| Command | Description |
+|---------|-------------|
+| `send [peer]` | Send clipboard to peer |
+| `recv [peer]` | Receive from peer |
+| `peek [peer]` | View peer's clipboard |
+
+**S3 remote slots:**
+| Command | Description |
+|---------|-------------|
+| `push <slot>` | Push clipboard to slot |
+| `pull <slot>` | Pull from slot |
+| `show <slot>` | View slot contents |
+| `slots` | List all slots |
+| `rm <slot>` | Delete slot |
 | `history` | Show recent operations |
-| `help` | Show help |
-| `version` | Show version |
 
-## Supported Backends
+## Platform Support
 
-### Local Clipboard
+| Platform | Clipboard | Image | Notes |
+|----------|-----------|-------|-------|
+| macOS | ✓ built-in | ✓ requires pngpaste/impbcopy | |
+| Linux (Wayland) | ✓ wl-clipboard | ✓ native | |
+| Linux (X11) | ✓ xclip or xsel | ✓ xclip only | |
+| WSL | ✓ clip.exe | paste only | |
 
-| Platform | Backend | Tools |
-|----------|---------|-------|
-| macOS | darwin-pasteboard | pbcopy, pbpaste |
-| Linux (Wayland) | wayland-wl-copy | wl-copy, wl-paste |
-| Linux (X11) | x11-xclip | xclip or xsel |
-| WSL | wsl-clip | clip.exe, powershell.exe |
-
-Backend detection is automatic based on environment variables (`WAYLAND_DISPLAY`, `DISPLAY`) and available commands.
-
-### Remote Sync
-
-| Backend | Storage | Auth |
-|---------|---------|------|
-| s3 | AWS S3 | AWS credentials/profile |
+Backend detection is automatic. Run `pipeboard doctor` to check your setup.
 
 ## Requirements
 
-### Local Clipboard
-
-- **macOS**: No additional tools needed (pbcopy/pbpaste are built-in)
-- **Wayland**: `wl-clipboard` package
-- **X11**: `xclip` or `xsel` package
-- **WSL**: Windows clipboard tools should be available automatically
-
-### Peer-to-Peer (SSH)
-
-- SSH access to peer machines
-- pipeboard installed on remote machines
-
-### Remote Sync (S3)
-
-- AWS credentials configured (via environment, profile, or IAM role)
-- S3 bucket with appropriate permissions
+- **Local clipboard**: Platform tools (see above), auto-detected
+- **SSH sync**: SSH access + pipeboard on remote machines
+- **S3 slots**: AWS credentials (env, profile, or IAM role)
 
 ## Security
 

@@ -13,6 +13,7 @@ type Config struct {
 	Defaults *DefaultsConfig       `yaml:"defaults,omitempty"`
 	Sync     *SyncConfig           `yaml:"sync,omitempty"`
 	Peers    map[string]PeerConfig `yaml:"peers,omitempty"`
+	Fx       map[string]FxConfig   `yaml:"fx,omitempty"` // clipboard transforms
 
 	// Legacy fields for backwards compatibility
 	Backend string    `yaml:"backend,omitempty"`
@@ -21,6 +22,13 @@ type Config struct {
 
 type DefaultsConfig struct {
 	Peer string `yaml:"peer,omitempty"` // default peer for send/recv/peek
+}
+
+// FxConfig defines a clipboard transform
+type FxConfig struct {
+	Cmd         []string `yaml:"cmd,omitempty"`         // command and args
+	Shell       string   `yaml:"shell,omitempty"`       // shorthand: runs via "sh -c"
+	Description string   `yaml:"description,omitempty"` // shown in fx --list
 }
 
 type SyncConfig struct {
@@ -251,4 +259,55 @@ func (cfg *Config) getDefaultPeer() (string, error) {
 		return "", fmt.Errorf("no default peer configured; set 'defaults.peer' in config or specify a peer name")
 	}
 	return cfg.Defaults.Peer, nil
+}
+
+// loadConfigForFx loads config for fx commands.
+// Returns empty config if file doesn't exist (no fx defined is valid).
+func loadConfigForFx() (*Config, error) {
+	path := configPath()
+	if path == "" {
+		return &Config{Fx: make(map[string]FxConfig)}, nil
+	}
+
+	data, err := os.ReadFile(path)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return &Config{Fx: make(map[string]FxConfig)}, nil
+		}
+		return nil, fmt.Errorf("reading config: %w", err)
+	}
+
+	var cfg Config
+	if err := yaml.Unmarshal(data, &cfg); err != nil {
+		return nil, fmt.Errorf("parsing config: %w", err)
+	}
+
+	if cfg.Fx == nil {
+		cfg.Fx = make(map[string]FxConfig)
+	}
+
+	return &cfg, nil
+}
+
+// getFx looks up an fx transform by name.
+func (cfg *Config) getFx(name string) (FxConfig, error) {
+	if len(cfg.Fx) == 0 {
+		return FxConfig{}, fmt.Errorf("no transforms defined; add 'fx' section to config")
+	}
+	fx, ok := cfg.Fx[name]
+	if !ok {
+		return FxConfig{}, fmt.Errorf("unknown transform %q; define it under 'fx' in config", name)
+	}
+	if len(fx.Cmd) == 0 && fx.Shell == "" {
+		return FxConfig{}, fmt.Errorf("transform %q has no 'cmd' or 'shell' defined", name)
+	}
+	return fx, nil
+}
+
+// getCommand returns the command to execute for this transform.
+func (fx *FxConfig) getCommand() []string {
+	if fx.Shell != "" {
+		return []string{"sh", "-c", fx.Shell}
+	}
+	return fx.Cmd
 }
