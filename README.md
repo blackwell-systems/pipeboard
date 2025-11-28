@@ -101,8 +101,8 @@ Define transforms in your config, then process clipboard contents in-place:
 # Format JSON in clipboard
 pipeboard fx pretty-json
 
-# Redact secrets before pasting into ChatGPT
-pipeboard fx redact-secrets
+# Chain multiple transforms
+pipeboard fx strip-ansi redact-secrets pretty-json
 
 # Preview without modifying clipboard
 pipeboard fx strip-ansi --dry-run
@@ -110,6 +110,11 @@ pipeboard fx strip-ansi --dry-run
 # List available transforms
 pipeboard fx --list
 ```
+
+**Safety guarantees:**
+- `--dry-run` prints to stdout, never touches clipboard
+- If any transform in a chain fails, clipboard is unchanged
+- Empty output = error, clipboard unchanged
 
 Transforms are defined in your config with either `cmd` (array) or `shell` (string) syntax:
 
@@ -270,8 +275,8 @@ PIPEBOARD_S3_SSE           # server-side encryption
 **Transforms:**
 | Command | Description |
 |---------|-------------|
-| `fx <name>` | Run transform in-place |
-| `fx <name> --dry-run` | Preview without modifying |
+| `fx <name> [name2...]` | Run transform(s) in-place (chainable) |
+| `fx <name> --dry-run` | Preview without modifying clipboard |
 | `fx --list` | List available transforms |
 
 **SSH peer sync:**
@@ -289,7 +294,14 @@ PIPEBOARD_S3_SSE           # server-side encryption
 | `show <slot>` | View slot contents |
 | `slots` | List all slots |
 | `rm <slot>` | Delete slot |
-| `history` | Show recent operations |
+
+**History:**
+| Command | Description |
+|---------|-------------|
+| `history` | Show recent operations (newest first) |
+| `history --fx` | Filter to fx transforms |
+| `history --slots` | Filter to push/pull/show/rm |
+| `history --peer` | Filter to send/recv/peek |
 
 ## Platform Support
 
@@ -298,6 +310,7 @@ PIPEBOARD_S3_SSE           # server-side encryption
 | macOS | ✓ built-in | ✓ requires pngpaste/impbcopy | |
 | Linux (Wayland) | ✓ wl-clipboard | ✓ native | |
 | Linux (X11) | ✓ xclip or xsel | ✓ xclip only | |
+| Windows | ✓ clip.exe + PowerShell | ✓ PowerShell | |
 | WSL | ✓ clip.exe | paste only | |
 
 Backend detection is automatic. Run `pipeboard doctor` to check your setup.

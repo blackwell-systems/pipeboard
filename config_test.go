@@ -368,3 +368,350 @@ func TestLoadConfigForPeersValidFile(t *testing.T) {
 		t.Errorf("expected SSH 'devbox', got %s", peer.SSH)
 	}
 }
+
+// Test fx config loading
+func TestLoadConfigForFxMissingFile(t *testing.T) {
+	orig := os.Getenv("PIPEBOARD_CONFIG")
+	defer restoreEnv("PIPEBOARD_CONFIG", orig)
+
+	_ = os.Setenv("PIPEBOARD_CONFIG", "/nonexistent/path/config.yaml")
+
+	// loadConfigForFx returns empty config for missing file (not an error)
+	cfg, err := loadConfigForFx()
+	if err != nil {
+		t.Fatalf("loadConfigForFx() should not error on missing file: %v", err)
+	}
+	if cfg.Fx == nil {
+		t.Error("Fx map should be initialized even for missing file")
+	}
+}
+
+func TestLoadConfigForFxValidFile(t *testing.T) {
+	tmpDir := t.TempDir()
+	configFile := filepath.Join(tmpDir, "config.yaml")
+
+	configContent := `fx:
+  pretty-json:
+    cmd: ["jq", "."]
+    description: "Format JSON"
+  strip-ansi:
+    shell: "sed 's/\\x1b\\[[0-9;]*m//g'"
+`
+	if err := os.WriteFile(configFile, []byte(configContent), 0644); err != nil {
+		t.Fatalf("failed to write config file: %v", err)
+	}
+
+	orig := os.Getenv("PIPEBOARD_CONFIG")
+	defer restoreEnv("PIPEBOARD_CONFIG", orig)
+
+	_ = os.Setenv("PIPEBOARD_CONFIG", configFile)
+
+	cfg, err := loadConfigForFx()
+	if err != nil {
+		t.Fatalf("loadConfigForFx() error: %v", err)
+	}
+
+	if cfg.Fx == nil {
+		t.Fatal("Fx map should not be nil")
+	}
+	if len(cfg.Fx) != 2 {
+		t.Errorf("expected 2 fx transforms, got %d", len(cfg.Fx))
+	}
+
+	// Check pretty-json
+	pj, ok := cfg.Fx["pretty-json"]
+	if !ok {
+		t.Fatal("expected 'pretty-json' transform to exist")
+	}
+	if len(pj.Cmd) != 2 || pj.Cmd[0] != "jq" {
+		t.Errorf("unexpected Cmd for pretty-json: %v", pj.Cmd)
+	}
+	if pj.Description != "Format JSON" {
+		t.Errorf("unexpected Description: %s", pj.Description)
+	}
+
+	// Check strip-ansi
+	sa, ok := cfg.Fx["strip-ansi"]
+	if !ok {
+		t.Fatal("expected 'strip-ansi' transform to exist")
+	}
+	if sa.Shell == "" {
+		t.Error("expected Shell to be set for strip-ansi")
+	}
+}
+
+func TestGetFx(t *testing.T) {
+	cfg := &Config{
+		Fx: map[string]FxConfig{
+			"pretty-json": {Cmd: []string{"jq", "."}, Description: "Format JSON"},
+			"strip-ansi":  {Shell: "sed 's/foo/bar/g'"},
+		},
+	}
+
+	t.Run("existing transform", func(t *testing.T) {
+		fx, err := cfg.getFx("pretty-json")
+		if err != nil {
+			t.Fatalf("getFx() error: %v", err)
+		}
+		if len(fx.Cmd) != 2 {
+			t.Errorf("expected Cmd length 2, got %d", len(fx.Cmd))
+		}
+	})
+
+	t.Run("unknown transform", func(t *testing.T) {
+		_, err := cfg.getFx("unknown")
+		if err == nil {
+			t.Error("expected error for unknown transform")
+		}
+	})
+
+	t.Run("empty fx map", func(t *testing.T) {
+		emptyCfg := &Config{}
+		_, err := emptyCfg.getFx("any")
+		if err == nil {
+			t.Error("expected error for empty fx map")
+		}
+	})
+}
+
+func TestFxConfigGetCommand(t *testing.T) {
+	t.Run("cmd syntax", func(t *testing.T) {
+		fx := FxConfig{Cmd: []string{"jq", "."}}
+		cmd := fx.getCommand()
+		if len(cmd) != 2 || cmd[0] != "jq" {
+			t.Errorf("unexpected command: %v", cmd)
+		}
+	})
+
+	t.Run("shell syntax", func(t *testing.T) {
+		fx := FxConfig{Shell: "sed 's/foo/bar/g'"}
+		cmd := fx.getCommand()
+		if len(cmd) != 3 {
+			t.Fatalf("expected 3 args for shell command, got %d", len(cmd))
+		}
+		if cmd[0] != "sh" || cmd[1] != "-c" {
+			t.Errorf("expected ['sh', '-c', ...], got %v", cmd)
+		}
+	})
+
+	t.Run("shell takes precedence", func(t *testing.T) {
+		// If both are set, shell should take precedence
+		fx := FxConfig{
+			Cmd:   []string{"jq", "."},
+			Shell: "cat",
+		}
+		cmd := fx.getCommand()
+		if cmd[0] != "sh" {
+			t.Error("shell should take precedence over cmd")
+		}
+	})
+
+	t.Run("empty config", func(t *testing.T) {
+		fx := FxConfig{}
+		cmd := fx.getCommand()
+		if len(cmd) != 0 {
+			t.Errorf("expected empty command, got %v", cmd)
+		}
+	})
+}
+
+func TestDefaultPeer(t *testing.T) {
+	cfg := &Config{
+		Defaults: &DefaultsConfig{
+			Peer: "dev",
+		},
+		Peers: map[string]PeerConfig{
+			"dev": {SSH: "devbox"},
+		},
+	}
+
+	if cfg.Defaults.Peer != "dev" {
+		t.Errorf("expected default peer 'dev', got %s", cfg.Defaults.Peer)
+	}
+}
+
+func TestEncryptionConfig(t *testing.T) {
+	tmpDir := t.TempDir()
+	configFile := filepath.Join(tmpDir, "config.yaml")
+
+	configContent := `version: 1
+sync:
+  backend: s3
+  encryption: aes256
+  passphrase: test-secret
+  ttl_days: 30
+  s3:
+    bucket: test-bucket
+    region: us-west-2
+`
+	if err := os.WriteFile(configFile, []byte(configContent), 0644); err != nil {
+		t.Fatalf("failed to write config file: %v", err)
+	}
+
+	orig := os.Getenv("PIPEBOARD_CONFIG")
+	defer restoreEnv("PIPEBOARD_CONFIG", orig)
+
+	_ = os.Setenv("PIPEBOARD_CONFIG", configFile)
+
+	cfg, err := loadConfig()
+	if err != nil {
+		t.Fatalf("loadConfig() error: %v", err)
+	}
+
+	if cfg.Sync.Encryption != "aes256" {
+		t.Errorf("expected encryption 'aes256', got %s", cfg.Sync.Encryption)
+	}
+	if cfg.Sync.Passphrase != "test-secret" {
+		t.Errorf("expected passphrase 'test-secret', got %s", cfg.Sync.Passphrase)
+	}
+	if cfg.Sync.TTLDays != 30 {
+		t.Errorf("expected TTLDays 30, got %d", cfg.Sync.TTLDays)
+	}
+}
+
+func TestGetDefaultPeer(t *testing.T) {
+	t.Run("with default set", func(t *testing.T) {
+		cfg := &Config{
+			Defaults: &DefaultsConfig{
+				Peer: "dev",
+			},
+			Peers: map[string]PeerConfig{
+				"dev": {SSH: "devbox"},
+			},
+		}
+
+		peerName, err := cfg.getDefaultPeer()
+		if err != nil {
+			t.Fatalf("getDefaultPeer() error: %v", err)
+		}
+		if peerName != "dev" {
+			t.Errorf("expected peer name 'dev', got %s", peerName)
+		}
+	})
+
+	t.Run("no default set", func(t *testing.T) {
+		cfg := &Config{
+			Peers: map[string]PeerConfig{
+				"dev": {SSH: "devbox"},
+			},
+		}
+
+		_, err := cfg.getDefaultPeer()
+		if err == nil {
+			t.Error("expected error when no default peer is set")
+		}
+	})
+
+	t.Run("empty default peer", func(t *testing.T) {
+		cfg := &Config{
+			Defaults: &DefaultsConfig{
+				Peer: "",
+			},
+			Peers: map[string]PeerConfig{
+				"dev": {SSH: "devbox"},
+			},
+		}
+
+		_, err := cfg.getDefaultPeer()
+		if err == nil {
+			t.Error("expected error when default peer is empty")
+		}
+	})
+
+	t.Run("nil defaults", func(t *testing.T) {
+		cfg := &Config{
+			Defaults: nil,
+			Peers: map[string]PeerConfig{
+				"dev": {SSH: "devbox"},
+			},
+		}
+
+		_, err := cfg.getDefaultPeer()
+		if err == nil {
+			t.Error("expected error when defaults is nil")
+		}
+	})
+}
+
+func TestEnsureSyncS3(t *testing.T) {
+	t.Run("nil sync creates both", func(t *testing.T) {
+		cfg := &Config{}
+		ensureSyncS3(cfg)
+		if cfg.Sync == nil {
+			t.Error("ensureSyncS3 should create Sync")
+		}
+		if cfg.Sync.S3 == nil {
+			t.Error("ensureSyncS3 should create S3 config")
+		}
+	})
+
+	t.Run("sync with nil S3", func(t *testing.T) {
+		cfg := &Config{
+			Sync: &SyncConfig{
+				Backend: "s3",
+			},
+		}
+		ensureSyncS3(cfg)
+		if cfg.Sync.S3 == nil {
+			t.Error("ensureSyncS3 should create S3 config")
+		}
+	})
+
+	t.Run("sync with existing S3", func(t *testing.T) {
+		cfg := &Config{
+			Sync: &SyncConfig{
+				Backend: "s3",
+				S3: &S3Config{
+					Bucket: "existing-bucket",
+				},
+			},
+		}
+		ensureSyncS3(cfg)
+		if cfg.Sync.S3.Bucket != "existing-bucket" {
+			t.Error("ensureSyncS3 should not overwrite existing S3 config")
+		}
+	})
+}
+
+func TestLoadConfigWithEnvOverrides(t *testing.T) {
+	tmpDir := t.TempDir()
+	configFile := filepath.Join(tmpDir, "config.yaml")
+
+	configContent := `version: 1
+sync:
+  backend: s3
+  s3:
+    bucket: config-bucket
+    region: us-west-2
+`
+	if err := os.WriteFile(configFile, []byte(configContent), 0644); err != nil {
+		t.Fatalf("failed to write config file: %v", err)
+	}
+
+	// Save original env vars
+	origConfig := os.Getenv("PIPEBOARD_CONFIG")
+	origBucket := os.Getenv("PIPEBOARD_S3_BUCKET")
+	origRegion := os.Getenv("PIPEBOARD_S3_REGION")
+	defer func() {
+		restoreEnv("PIPEBOARD_CONFIG", origConfig)
+		restoreEnv("PIPEBOARD_S3_BUCKET", origBucket)
+		restoreEnv("PIPEBOARD_S3_REGION", origRegion)
+	}()
+
+	_ = os.Setenv("PIPEBOARD_CONFIG", configFile)
+	_ = os.Setenv("PIPEBOARD_S3_BUCKET", "env-bucket")
+	_ = os.Setenv("PIPEBOARD_S3_REGION", "eu-west-1")
+
+	cfg, err := loadConfig()
+	if err != nil {
+		t.Fatalf("loadConfig() error: %v", err)
+	}
+
+	// Env vars should override config file
+	if cfg.Sync.S3.Bucket != "env-bucket" {
+		t.Errorf("expected bucket 'env-bucket', got %s", cfg.Sync.S3.Bucket)
+	}
+	if cfg.Sync.S3.Region != "eu-west-1" {
+		t.Errorf("expected region 'eu-west-1', got %s", cfg.Sync.S3.Region)
+	}
+}
