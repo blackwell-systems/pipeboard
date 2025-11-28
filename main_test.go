@@ -822,3 +822,39 @@ func TestX11BackendImageFields(t *testing.T) {
 		}
 	}
 }
+
+// Test isSlotCommand helper
+func TestIsSlotCommand(t *testing.T) {
+	slotCommands := []string{"push", "pull", "show", "rm"}
+	nonSlotCommands := []string{"send", "recv", "peek", "copy", "paste", "fx", "history"}
+
+	for _, cmd := range slotCommands {
+		if !isSlotCommand(cmd) {
+			t.Errorf("isSlotCommand(%q) should return true", cmd)
+		}
+	}
+
+	for _, cmd := range nonSlotCommands {
+		if isSlotCommand(cmd) {
+			t.Errorf("isSlotCommand(%q) should return false", cmd)
+		}
+	}
+}
+
+// Test isPeerCommand helper
+func TestIsPeerCommand(t *testing.T) {
+	peerCommands := []string{"send", "recv", "peek"}
+	nonPeerCommands := []string{"push", "pull", "show", "rm", "copy", "paste", "fx", "history"}
+
+	for _, cmd := range peerCommands {
+		if !isPeerCommand(cmd) {
+			t.Errorf("isPeerCommand(%q) should return true", cmd)
+		}
+	}
+
+	for _, cmd := range nonPeerCommands {
+		if isPeerCommand(cmd) {
+			t.Errorf("isPeerCommand(%q) should return false", cmd)
+		}
+	}
+}
