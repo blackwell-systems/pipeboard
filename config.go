@@ -207,7 +207,7 @@ func validateSyncConfig(cfg *Config) error {
 
 // getPeer looks up a peer by name and returns a fully-defaulted PeerConfig.
 func (cfg *Config) getPeer(name string) (PeerConfig, error) {
-	if cfg.Peers == nil || len(cfg.Peers) == 0 {
+	if len(cfg.Peers) == 0 {
 		return PeerConfig{}, fmt.Errorf("no peers configured; add peer %q under 'peers' in config", name)
 	}
 	peer, ok := cfg.Peers[name]

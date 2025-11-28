@@ -572,8 +572,8 @@ func cmdShow(args []string) error {
 	}
 
 	// Write to stdout instead of clipboard
-	os.Stdout.Write(data)
-	return nil
+	_, err = os.Stdout.Write(data)
+	return err
 }
 
 func cmdSlots(args []string) error {

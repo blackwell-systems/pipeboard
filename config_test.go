@@ -12,13 +12,13 @@ func TestConfigPath(t *testing.T) {
 		orig := os.Getenv("PIPEBOARD_CONFIG")
 		defer func() {
 			if orig != "" {
-				os.Setenv("PIPEBOARD_CONFIG", orig)
+				_ = os.Setenv("PIPEBOARD_CONFIG", orig)
 			} else {
-				os.Unsetenv("PIPEBOARD_CONFIG")
+				_ = os.Unsetenv("PIPEBOARD_CONFIG")
 			}
 		}()
 
-		os.Setenv("PIPEBOARD_CONFIG", "/custom/path/config.yaml")
+		_ = os.Setenv("PIPEBOARD_CONFIG", "/custom/path/config.yaml")
 		if p := configPath(); p != "/custom/path/config.yaml" {
 			t.Errorf("expected custom path, got %s", p)
 		}
@@ -30,19 +30,19 @@ func TestConfigPath(t *testing.T) {
 		origXDG := os.Getenv("XDG_CONFIG_HOME")
 		defer func() {
 			if origConfig != "" {
-				os.Setenv("PIPEBOARD_CONFIG", origConfig)
+				_ = os.Setenv("PIPEBOARD_CONFIG", origConfig)
 			} else {
-				os.Unsetenv("PIPEBOARD_CONFIG")
+				_ = os.Unsetenv("PIPEBOARD_CONFIG")
 			}
 			if origXDG != "" {
-				os.Setenv("XDG_CONFIG_HOME", origXDG)
+				_ = os.Setenv("XDG_CONFIG_HOME", origXDG)
 			} else {
-				os.Unsetenv("XDG_CONFIG_HOME")
+				_ = os.Unsetenv("XDG_CONFIG_HOME")
 			}
 		}()
 
-		os.Unsetenv("PIPEBOARD_CONFIG")
-		os.Setenv("XDG_CONFIG_HOME", "/xdg/config")
+		_ = os.Unsetenv("PIPEBOARD_CONFIG")
+		_ = os.Setenv("XDG_CONFIG_HOME", "/xdg/config")
 
 		expected := "/xdg/config/pipeboard/config.yaml"
 		if p := configPath(); p != expected {
@@ -79,9 +79,9 @@ func TestApplyDefaultsPeerRemoteCmd(t *testing.T) {
 
 func restoreEnv(key, value string) {
 	if value != "" {
-		os.Setenv(key, value)
+		_ = os.Setenv(key, value)
 	} else {
-		os.Unsetenv(key)
+		_ = os.Unsetenv(key)
 	}
 }
 
@@ -174,7 +174,7 @@ func TestLoadConfigMissingFile(t *testing.T) {
 	orig := os.Getenv("PIPEBOARD_CONFIG")
 	defer restoreEnv("PIPEBOARD_CONFIG", orig)
 
-	os.Setenv("PIPEBOARD_CONFIG", "/nonexistent/path/config.yaml")
+	_ = os.Setenv("PIPEBOARD_CONFIG", "/nonexistent/path/config.yaml")
 
 	_, err := loadConfig()
 	if err == nil {
@@ -207,7 +207,7 @@ peers:
 	orig := os.Getenv("PIPEBOARD_CONFIG")
 	defer restoreEnv("PIPEBOARD_CONFIG", orig)
 
-	os.Setenv("PIPEBOARD_CONFIG", configFile)
+	_ = os.Setenv("PIPEBOARD_CONFIG", configFile)
 
 	cfg, err := loadConfig()
 	if err != nil {
@@ -260,7 +260,7 @@ s3:
 	orig := os.Getenv("PIPEBOARD_CONFIG")
 	defer restoreEnv("PIPEBOARD_CONFIG", orig)
 
-	os.Setenv("PIPEBOARD_CONFIG", configFile)
+	_ = os.Setenv("PIPEBOARD_CONFIG", configFile)
 
 	cfg, err := loadConfig()
 	if err != nil {
@@ -330,7 +330,7 @@ func TestLoadConfigForPeersMissingFile(t *testing.T) {
 	orig := os.Getenv("PIPEBOARD_CONFIG")
 	defer restoreEnv("PIPEBOARD_CONFIG", orig)
 
-	os.Setenv("PIPEBOARD_CONFIG", "/nonexistent/path/config.yaml")
+	_ = os.Setenv("PIPEBOARD_CONFIG", "/nonexistent/path/config.yaml")
 
 	_, err := loadConfigForPeers()
 	if err == nil {
@@ -353,7 +353,7 @@ func TestLoadConfigForPeersValidFile(t *testing.T) {
 	orig := os.Getenv("PIPEBOARD_CONFIG")
 	defer restoreEnv("PIPEBOARD_CONFIG", orig)
 
-	os.Setenv("PIPEBOARD_CONFIG", configFile)
+	_ = os.Setenv("PIPEBOARD_CONFIG", configFile)
 
 	cfg, err := loadConfigForPeers()
 	if err != nil {
