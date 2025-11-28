@@ -86,10 +86,10 @@ func TestDetectDarwin(t *testing.T) {
 func TestDetectWayland(t *testing.T) {
 	// Test with WAYLAND_DISPLAY unset
 	orig := os.Getenv("WAYLAND_DISPLAY")
-	os.Unsetenv("WAYLAND_DISPLAY")
+	_ = os.Unsetenv("WAYLAND_DISPLAY")
 	defer func() {
 		if orig != "" {
-			os.Setenv("WAYLAND_DISPLAY", orig)
+			_ = os.Setenv("WAYLAND_DISPLAY", orig)
 		}
 	}()
 
@@ -99,7 +99,7 @@ func TestDetectWayland(t *testing.T) {
 	}
 
 	// Test with WAYLAND_DISPLAY set
-	os.Setenv("WAYLAND_DISPLAY", "wayland-0")
+	_ = os.Setenv("WAYLAND_DISPLAY", "wayland-0")
 	b = detectWayland()
 	if b == nil {
 		t.Fatal("detectWayland() should return backend when WAYLAND_DISPLAY is set")
@@ -115,10 +115,10 @@ func TestDetectWayland(t *testing.T) {
 func TestDetectX11(t *testing.T) {
 	// Test with DISPLAY unset
 	orig := os.Getenv("DISPLAY")
-	os.Unsetenv("DISPLAY")
+	_ = os.Unsetenv("DISPLAY")
 	defer func() {
 		if orig != "" {
-			os.Setenv("DISPLAY", orig)
+			_ = os.Setenv("DISPLAY", orig)
 		}
 	}()
 
@@ -128,7 +128,7 @@ func TestDetectX11(t *testing.T) {
 	}
 
 	// Test with DISPLAY set
-	os.Setenv("DISPLAY", ":0")
+	_ = os.Setenv("DISPLAY", ":0")
 	b = detectX11()
 	if b == nil {
 		t.Fatal("detectX11() should return backend when DISPLAY is set")
@@ -204,8 +204,8 @@ func TestReadInputOrArgsFromStdin(t *testing.T) {
 
 	testData := "test input from stdin"
 	go func() {
-		w.WriteString(testData)
-		w.Close()
+		_, _ = w.WriteString(testData)
+		_ = w.Close()
 	}()
 
 	os.Stdin = r
@@ -294,11 +294,11 @@ func captureOutput(f func()) string {
 
 	f()
 
-	w.Close()
+	_ = w.Close()
 	os.Stdout = old
 
 	var buf bytes.Buffer
-	buf.ReadFrom(r)
+	_, _ = buf.ReadFrom(r)
 	return buf.String()
 }
 

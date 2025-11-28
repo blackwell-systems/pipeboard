@@ -161,7 +161,7 @@ func TestNewRemoteBackendFromConfigNoConfig(t *testing.T) {
 	origConfig := os.Getenv("PIPEBOARD_CONFIG")
 	defer restoreEnv("PIPEBOARD_CONFIG", origConfig)
 
-	os.Setenv("PIPEBOARD_CONFIG", "/nonexistent/config.yaml")
+	_ = os.Setenv("PIPEBOARD_CONFIG", "/nonexistent/config.yaml")
 
 	_, err := newRemoteBackendFromConfig()
 	if err == nil {

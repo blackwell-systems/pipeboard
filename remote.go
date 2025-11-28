@@ -168,7 +168,7 @@ func (b *S3Backend) Pull(slot string) ([]byte, map[string]string, error) {
 	if err != nil {
 		return nil, nil, fmt.Errorf("fetching from S3: %w", err)
 	}
-	defer result.Body.Close()
+	defer func() { _ = result.Body.Close() }()
 
 	jsonData, err := io.ReadAll(result.Body)
 	if err != nil {
