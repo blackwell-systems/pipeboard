@@ -25,13 +25,15 @@ const (
 )
 
 type Backend struct {
-	Kind      BackendKind
-	CopyCmd   []string
-	PasteCmd  []string
-	ClearCmd  []string // if empty, use CopyCmd with empty stdin
-	Notes     string
-	Missing   []string
-	EnvSource string
+	Kind          BackendKind
+	CopyCmd       []string
+	PasteCmd      []string
+	ClearCmd      []string // if empty, use CopyCmd with empty stdin
+	ImageCopyCmd  []string // for copying images (PNG)
+	ImagePasteCmd []string // for pasting images (PNG)
+	Notes         string
+	Missing       []string
+	EnvSource     string
 }
 
 func main() {
@@ -73,7 +75,7 @@ func main() {
 	case "help", "-h", "--help":
 		printHelp()
 	case "version", "-v", "--version":
-		fmt.Println("pipeboard v0.2.0")
+		fmt.Println("pipeboard v0.3.0")
 	default:
 		fmt.Fprintf(os.Stderr, "Unknown command: %s\n\n", cmd)
 		printHelp()
@@ -89,7 +91,9 @@ Usage:
 
 Local clipboard:
   copy [text]          Copy stdin or provided text to clipboard
+  copy --image         Copy PNG image from stdin to clipboard
   paste                Paste clipboard contents to stdout
+  paste --image        Paste clipboard image as PNG to stdout
   clear                Clear clipboard (best-effort)
   backend              Show detected clipboard backend
   doctor               Run environment checks
@@ -135,10 +139,23 @@ Examples:
   pipeboard paste | jq .
   pipeboard send                    # uses default peer
   pipeboard send dev
-  pipeboard push kube && ssh server "pipeboard pull kube"`)
+  pipeboard push kube && ssh server "pipeboard pull kube"
+  cat screenshot.png | pipeboard copy --image
+  pipeboard paste --image > clipboard.png`)
 }
 
 func cmdCopy(args []string) error {
+	// Check for --image flag
+	imageMode := false
+	var filteredArgs []string
+	for _, arg := range args {
+		if arg == "--image" || arg == "-i" {
+			imageMode = true
+		} else {
+			filteredArgs = append(filteredArgs, arg)
+		}
+	}
+
 	b, err := detectBackend()
 	if err != nil {
 		return err
@@ -146,7 +163,23 @@ func cmdCopy(args []string) error {
 	if len(b.Missing) > 0 {
 		return fmt.Errorf("backend %s is missing required tools: %s", b.Kind, strings.Join(b.Missing, ", "))
 	}
-	data, err := readInputOrArgs(args)
+
+	if imageMode {
+		if len(b.ImageCopyCmd) == 0 {
+			return fmt.Errorf("image copy not supported on backend %s", b.Kind)
+		}
+		// For image mode, read from stdin only (no text args)
+		if len(filteredArgs) > 0 {
+			return errors.New("--image mode reads PNG data from stdin, does not accept text arguments")
+		}
+		data, err := io.ReadAll(os.Stdin)
+		if err != nil {
+			return err
+		}
+		return runWithInput(b.ImageCopyCmd, data)
+	}
+
+	data, err := readInputOrArgs(filteredArgs)
 	if err != nil {
 		return err
 	}
@@ -154,9 +187,16 @@ func cmdCopy(args []string) error {
 }
 
 func cmdPaste(args []string) error {
-	if len(args) > 0 {
-		return errors.New("paste does not take arguments")
+	// Check for --image flag
+	imageMode := false
+	for _, arg := range args {
+		if arg == "--image" || arg == "-i" {
+			imageMode = true
+		} else {
+			return fmt.Errorf("unknown argument: %s", arg)
+		}
 	}
+
 	b, err := detectBackend()
 	if err != nil {
 		return err
@@ -164,6 +204,14 @@ func cmdPaste(args []string) error {
 	if len(b.Missing) > 0 {
 		return fmt.Errorf("backend %s is missing required tools: %s", b.Kind, strings.Join(b.Missing, ", "))
 	}
+
+	if imageMode {
+		if len(b.ImagePasteCmd) == 0 {
+			return fmt.Errorf("image paste not supported on backend %s", b.Kind)
+		}
+		return runAndPipeStdout(b.ImagePasteCmd)
+	}
+
 	return runAndPipeStdout(b.PasteCmd)
 }
 
@@ -292,11 +340,48 @@ func detectDarwin() (*Backend, error) {
 	if !hasCmd("pbpaste") {
 		missing = append(missing, "pbpaste")
 	}
+
+	// Image commands use osascript for reading/writing PNG from clipboard
+	// Copy: read PNG from stdin and set as clipboard image
+	// Paste: get clipboard image as PNG to stdout
+	imageCopyCmd := []string{}
+	imagePasteCmd := []string{}
+
+	if hasCmd("osascript") {
+		// For paste: use osascript to write clipboard image to temp file, then cat it
+		// This is complex, so we use a helper approach
+		imagePasteCmd = []string{"osascript", "-e", `
+			use framework "AppKit"
+			use scripting additions
+			set pb to current application's NSPasteboard's generalPasteboard()
+			set imgData to pb's dataForType:(current application's NSPasteboardTypePNG)
+			if imgData is missing value then
+				error "No image on clipboard"
+			end if
+			set rawData to (current application's NSString's alloc()'s initWithData:imgData encoding:(current application's NSUTF8StringEncoding))
+			return (imgData's base64EncodedStringWithOptions:0) as text
+		`}
+		// Note: Darwin image paste outputs base64, needs wrapper
+	}
+
+	// Check for pngpaste (brew install pngpaste) - simpler alternative
+	if hasCmd("pngpaste") {
+		imagePasteCmd = []string{"pngpaste", "-"}
+	}
+
+	// Check for impbcopy (for copying images)
+	if hasCmd("impbcopy") {
+		imageCopyCmd = []string{"impbcopy", "-"}
+	}
+
 	return &Backend{
-		Kind:     BackendDarwin,
-		CopyCmd:  []string{"pbcopy"},
-		PasteCmd: []string{"pbpaste"},
-		Missing:  missing,
+		Kind:          BackendDarwin,
+		CopyCmd:       []string{"pbcopy"},
+		PasteCmd:      []string{"pbpaste"},
+		ImageCopyCmd:  imageCopyCmd,
+		ImagePasteCmd: imagePasteCmd,
+		Missing:       missing,
+		Notes:         "For image support, install pngpaste and impbcopy (brew install pngpaste impbcopy)",
 	}, nil
 }
 
@@ -312,12 +397,14 @@ func detectWayland() *Backend {
 		missing = append(missing, "wl-paste")
 	}
 	return &Backend{
-		Kind:      BackendWayland,
-		CopyCmd:   []string{"wl-copy"},
-		PasteCmd:  []string{"wl-paste"},
-		ClearCmd:  []string{"wl-copy", "--clear"},
-		Missing:   missing,
-		EnvSource: "WAYLAND_DISPLAY",
+		Kind:          BackendWayland,
+		CopyCmd:       []string{"wl-copy"},
+		PasteCmd:      []string{"wl-paste"},
+		ClearCmd:      []string{"wl-copy", "--clear"},
+		ImageCopyCmd:  []string{"wl-copy", "--type", "image/png"},
+		ImagePasteCmd: []string{"wl-paste", "--type", "image/png"},
+		Missing:       missing,
+		EnvSource:     "WAYLAND_DISPLAY",
 	}
 }
 
@@ -328,22 +415,29 @@ func detectX11() *Backend {
 	missing := []string{}
 	copyCmd := []string{"xclip", "-selection", "clipboard"}
 	pasteCmd := []string{"xclip", "-selection", "clipboard", "-o"}
+	imageCopyCmd := []string{"xclip", "-selection", "clipboard", "-t", "image/png"}
+	imagePasteCmd := []string{"xclip", "-selection", "clipboard", "-t", "image/png", "-o"}
 
 	if !hasCmd("xclip") {
 		if hasCmd("xsel") {
 			copyCmd = []string{"xsel", "--clipboard", "--input"}
 			pasteCmd = []string{"xsel", "--clipboard", "--output"}
+			// xsel doesn't support images well, clear image commands
+			imageCopyCmd = nil
+			imagePasteCmd = nil
 		} else {
 			missing = append(missing, "xclip/xsel")
 		}
 	}
 
 	return &Backend{
-		Kind:      BackendX11,
-		CopyCmd:   copyCmd,
-		PasteCmd:  pasteCmd,
-		Missing:   missing,
-		EnvSource: "DISPLAY",
+		Kind:          BackendX11,
+		CopyCmd:       copyCmd,
+		PasteCmd:      pasteCmd,
+		ImageCopyCmd:  imageCopyCmd,
+		ImagePasteCmd: imagePasteCmd,
+		Missing:       missing,
+		EnvSource:     "DISPLAY",
 	}
 }
 
@@ -356,12 +450,20 @@ func detectWSL() *Backend {
 	if !hasCmd("powershell.exe") {
 		missing = append(missing, "powershell.exe")
 	}
+
+	// Image support via PowerShell (limited - paste outputs base64)
+	imagePasteCmd := []string{
+		"powershell.exe", "-NoProfile", "-Command",
+		"$img = Get-Clipboard -Format Image; if ($img) { $ms = New-Object System.IO.MemoryStream; $img.Save($ms, [System.Drawing.Imaging.ImageFormat]::Png); [Convert]::ToBase64String($ms.ToArray()) } else { throw 'No image on clipboard' }",
+	}
+
 	return &Backend{
-		Kind:     BackendWSL,
-		CopyCmd:  []string{"clip.exe"},
-		PasteCmd: []string{"powershell.exe", "-NoProfile", "-Command", "Get-Clipboard"},
-		Missing:  missing,
-		Notes:    "WSL detection based on clip.exe in PATH.",
+		Kind:          BackendWSL,
+		CopyCmd:       []string{"clip.exe"},
+		PasteCmd:      []string{"powershell.exe", "-NoProfile", "-Command", "Get-Clipboard"},
+		ImagePasteCmd: imagePasteCmd,
+		Missing:       missing,
+		Notes:         "WSL detection based on clip.exe in PATH. Image copy not supported.",
 	}
 }
 
@@ -378,14 +480,25 @@ func detectWindows() (*Backend, error) {
 		copyCmd = []string{"clip.exe"}
 	}
 	pasteCmd := []string{"powershell.exe", "-NoProfile", "-Command", "Get-Clipboard"}
+	psCmd := "powershell.exe"
 	if !hasCmd("powershell.exe") && hasCmd("powershell") {
 		pasteCmd[0] = "powershell"
+		psCmd = "powershell"
 	}
+
+	// Image paste via PowerShell
+	imagePasteCmd := []string{
+		psCmd, "-NoProfile", "-Command",
+		"$img = Get-Clipboard -Format Image; if ($img) { $ms = New-Object System.IO.MemoryStream; $img.Save($ms, [System.Drawing.Imaging.ImageFormat]::Png); $ms.ToArray() | Set-Content -Path $env:TEMP\\pb_img.png -Encoding Byte; Get-Content -Path $env:TEMP\\pb_img.png -Encoding Byte -Raw } else { throw 'No image on clipboard' }",
+	}
+
 	return &Backend{
-		Kind:     BackendWSL,
-		CopyCmd:  copyCmd,
-		PasteCmd: pasteCmd,
-		Missing:  missing,
+		Kind:          BackendWSL,
+		CopyCmd:       copyCmd,
+		PasteCmd:      pasteCmd,
+		ImagePasteCmd: imagePasteCmd,
+		Missing:       missing,
+		Notes:         "Image copy not supported on Windows.",
 	}, nil
 }
 

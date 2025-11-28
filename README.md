@@ -68,6 +68,10 @@ pipeboard paste | jq .
 # Clear clipboard
 pipeboard clear
 
+# Copy/paste images (PNG)
+cat screenshot.png | pipeboard copy --image
+pipeboard paste --image > clipboard.png
+
 # Check detected backend
 pipeboard backend
 
@@ -194,7 +198,9 @@ PIPEBOARD_S3_SSE           # server-side encryption
 | Command | Description |
 |---------|-------------|
 | `copy [text]` | Copy stdin or provided text to clipboard |
+| `copy --image` | Copy PNG image from stdin to clipboard |
 | `paste` | Output clipboard contents to stdout |
+| `paste --image` | Paste clipboard image as PNG to stdout |
 | `clear` | Clear the clipboard |
 | `backend` | Show detected clipboard backend |
 | `doctor` | Check dependencies and environment |

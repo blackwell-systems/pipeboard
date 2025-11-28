@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.0] - 2025-01-28
+
+### Added
+- **Image clipboard support** - `copy --image` and `paste --image` flags for PNG image clipboard operations
+  - macOS: Requires `pngpaste` and `impbcopy` (install via Homebrew)
+  - Linux Wayland: Native support via `wl-copy`/`wl-paste`
+  - Linux X11: Native support via `xclip` (xsel does not support images)
+  - WSL/Windows: Paste only via PowerShell
+
 ## [0.2.0] - 2025-01-28
 
 ### Added
@@ -37,6 +46,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - SSH transport for peer sync
 - Optional S3 server-side encryption (AES256/KMS)
 
-[Unreleased]: https://github.com/blackwell-systems/pipeboard/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/blackwell-systems/pipeboard/compare/v0.3.0...HEAD
+[0.3.0]: https://github.com/blackwell-systems/pipeboard/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/blackwell-systems/pipeboard/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/blackwell-systems/pipeboard/releases/tag/v0.1.0
