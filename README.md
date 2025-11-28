@@ -10,17 +10,43 @@ A tiny cross-platform clipboard CLI with peer-to-peer SSH sync and optional S3 r
 
 ## Installation
 
+**Homebrew (macOS/Linux):**
+```bash
+brew install blackwell-systems/tap/pipeboard
+```
+
+**Go:**
 ```bash
 go install github.com/blackwell-systems/pipeboard@latest
 ```
 
-Or build from source:
+**Download binary:**
+```bash
+# macOS (Apple Silicon)
+curl -LO https://github.com/blackwell-systems/pipeboard/releases/latest/download/pipeboard_darwin_arm64.tar.gz
+tar xzf pipeboard_darwin_arm64.tar.gz
+sudo mv pipeboard /usr/local/bin/
 
+# Linux (x86_64)
+curl -LO https://github.com/blackwell-systems/pipeboard/releases/latest/download/pipeboard_linux_amd64.tar.gz
+tar xzf pipeboard_linux_amd64.tar.gz
+sudo mv pipeboard /usr/local/bin/
+```
+
+**From source:**
 ```bash
 git clone https://github.com/blackwell-systems/pipeboard.git
-cd pipeboard
-go build -o pipeboard
+cd pipeboard && go build
 ```
+
+## Why pipeboard?
+
+| Problem | Without pipeboard | With pipeboard |
+|---------|-------------------|----------------|
+| Different clipboard tools per OS | `pbcopy` on Mac, `xclip` on Linux, `clip.exe` on WSL | `pipeboard copy/paste` everywhere |
+| Copy between machines | Manual SSH, scp, or shared files | `pipeboard send dev` |
+| Persistent clipboard across reboots | Not possible | `pipeboard push/pull` via S3 |
+| Share config snippets async | Slack/email yourself | `pipeboard push kube` on laptop, `pipeboard pull kube` on server |
 
 ## Usage
 
@@ -213,6 +239,13 @@ Backend detection is automatic based on environment variables (`WAYLAND_DISPLAY`
 
 - AWS credentials configured (via environment, profile, or IAM role)
 - S3 bucket with appropriate permissions
+
+## Security
+
+pipeboard handles potentially sensitive clipboard data. See [SECURITY.md](SECURITY.md) for details on:
+- Data handling (no logging, no telemetry)
+- Transport security (SSH, HTTPS/S3)
+- Configuration recommendations
 
 ## License
 
