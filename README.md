@@ -298,6 +298,7 @@ PIPEBOARD_S3_SSE           # server-side encryption
 | macOS | ✓ built-in | ✓ requires pngpaste/impbcopy | |
 | Linux (Wayland) | ✓ wl-clipboard | ✓ native | |
 | Linux (X11) | ✓ xclip or xsel | ✓ xclip only | |
+| Windows | ✓ clip.exe + PowerShell | ✓ PowerShell | |
 | WSL | ✓ clip.exe | paste only | |
 
 Backend detection is automatic. Run `pipeboard doctor` to check your setup.

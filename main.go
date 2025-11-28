@@ -21,6 +21,7 @@ const (
 	BackendWayland BackendKind = "wayland-wl-copy"
 	BackendX11     BackendKind = "x11-xclip"
 	BackendWSL     BackendKind = "wsl-clip"
+	BackendWindows BackendKind = "windows-clip"
 	BackendUnknown BackendKind = "unknown"
 )
 
@@ -490,30 +491,41 @@ func detectWindows() (*Backend, error) {
 	if !hasCmd("powershell.exe") && !hasCmd("powershell") {
 		missing = append(missing, "powershell.exe")
 	}
-	copyCmd := []string{"clip"}
-	if hasCmd("clip.exe") {
-		copyCmd = []string{"clip.exe"}
-	}
-	pasteCmd := []string{"powershell.exe", "-NoProfile", "-Command", "Get-Clipboard"}
+
+	// Determine PowerShell executable
 	psCmd := "powershell.exe"
 	if !hasCmd("powershell.exe") && hasCmd("powershell") {
-		pasteCmd[0] = "powershell"
 		psCmd = "powershell"
 	}
 
-	// Image paste via PowerShell
+	// Copy: use clip.exe for text
+	copyCmd := []string{"clip.exe"}
+	if !hasCmd("clip.exe") && hasCmd("clip") {
+		copyCmd = []string{"clip"}
+	}
+
+	// Paste: use PowerShell Get-Clipboard
+	pasteCmd := []string{psCmd, "-NoProfile", "-Command", "Get-Clipboard"}
+
+	// Image copy via PowerShell - read PNG from stdin and set to clipboard
+	imageCopyCmd := []string{
+		psCmd, "-NoProfile", "-Command",
+		"Add-Type -AssemblyName System.Windows.Forms; $input | Set-Content -Path $env:TEMP\\pb_img.png -Encoding Byte; [System.Windows.Forms.Clipboard]::SetImage([System.Drawing.Image]::FromFile(\"$env:TEMP\\pb_img.png\")); Remove-Item $env:TEMP\\pb_img.png",
+	}
+
+	// Image paste via PowerShell - get clipboard image as PNG bytes to stdout
 	imagePasteCmd := []string{
 		psCmd, "-NoProfile", "-Command",
-		"$img = Get-Clipboard -Format Image; if ($img) { $ms = New-Object System.IO.MemoryStream; $img.Save($ms, [System.Drawing.Imaging.ImageFormat]::Png); $ms.ToArray() | Set-Content -Path $env:TEMP\\pb_img.png -Encoding Byte; Get-Content -Path $env:TEMP\\pb_img.png -Encoding Byte -Raw } else { throw 'No image on clipboard' }",
+		"Add-Type -AssemblyName System.Windows.Forms; $img = [System.Windows.Forms.Clipboard]::GetImage(); if ($img) { $ms = New-Object System.IO.MemoryStream; $img.Save($ms, [System.Drawing.Imaging.ImageFormat]::Png); [Console]::OpenStandardOutput().Write($ms.ToArray(), 0, $ms.Length) } else { throw 'No image on clipboard' }",
 	}
 
 	return &Backend{
-		Kind:          BackendWSL,
+		Kind:          BackendWindows,
 		CopyCmd:       copyCmd,
 		PasteCmd:      pasteCmd,
+		ImageCopyCmd:  imageCopyCmd,
 		ImagePasteCmd: imagePasteCmd,
 		Missing:       missing,
-		Notes:         "Image copy not supported on Windows.",
 	}, nil
 }
 

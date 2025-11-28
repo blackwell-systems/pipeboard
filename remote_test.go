@@ -168,3 +168,115 @@ func TestNewRemoteBackendFromConfigNoConfig(t *testing.T) {
 		t.Error("expected error when config doesn't exist")
 	}
 }
+
+func TestNewRemoteBackendFromConfigNoSyncSection(t *testing.T) {
+	tmpDir := t.TempDir()
+	configFile := tmpDir + "/config.yaml"
+
+	// Config with no sync section
+	configContent := `version: 1
+peers:
+  dev:
+    ssh: devbox
+`
+	if err := os.WriteFile(configFile, []byte(configContent), 0644); err != nil {
+		t.Fatalf("failed to write config: %v", err)
+	}
+
+	origConfig := os.Getenv("PIPEBOARD_CONFIG")
+	defer restoreEnv("PIPEBOARD_CONFIG", origConfig)
+
+	_ = os.Setenv("PIPEBOARD_CONFIG", configFile)
+
+	_, err := newRemoteBackendFromConfig()
+	if err == nil {
+		t.Error("expected error when sync section is missing")
+	}
+}
+
+func TestNewRemoteBackendFromConfigUnsupportedBackend(t *testing.T) {
+	tmpDir := t.TempDir()
+	configFile := tmpDir + "/config.yaml"
+
+	// Config with unsupported backend
+	configContent := `version: 1
+sync:
+  backend: gcs
+`
+	if err := os.WriteFile(configFile, []byte(configContent), 0644); err != nil {
+		t.Fatalf("failed to write config: %v", err)
+	}
+
+	origConfig := os.Getenv("PIPEBOARD_CONFIG")
+	defer restoreEnv("PIPEBOARD_CONFIG", origConfig)
+
+	_ = os.Setenv("PIPEBOARD_CONFIG", configFile)
+
+	_, err := newRemoteBackendFromConfig()
+	if err == nil {
+		t.Error("expected error for unsupported backend")
+	}
+}
+
+func TestSlotPayloadWithEncryption(t *testing.T) {
+	data := []byte("secret data")
+
+	payload := SlotPayload{
+		Version:   1,
+		CreatedAt: time.Now().UTC().Format(time.RFC3339),
+		Hostname:  "test-host",
+		OS:        "darwin",
+		Len:       len(data),
+		MIME:      "text/plain; charset=utf-8",
+		DataB64:   base64.StdEncoding.EncodeToString(data),
+		Encrypted: true,
+	}
+
+	if !payload.Encrypted {
+		t.Error("expected Encrypted to be true")
+	}
+
+	// Verify JSON encoding preserves encrypted flag
+	jsonData, err := json.Marshal(payload)
+	if err != nil {
+		t.Fatalf("failed to marshal: %v", err)
+	}
+
+	var decoded SlotPayload
+	if err := json.Unmarshal(jsonData, &decoded); err != nil {
+		t.Fatalf("failed to unmarshal: %v", err)
+	}
+
+	if !decoded.Encrypted {
+		t.Error("expected decoded Encrypted to be true")
+	}
+}
+
+func TestFormatAgeEdgeCases(t *testing.T) {
+	// Test with zero time
+	zeroTime := time.Time{}
+	result := formatAge(zeroTime)
+	// Should handle gracefully
+	if result == "" {
+		t.Error("formatAge with zero time should return something")
+	}
+
+	// Test with future time (edge case)
+	futureTime := time.Now().Add(1 * time.Hour)
+	result = formatAge(futureTime)
+	// Should handle gracefully
+	if result == "" {
+		t.Error("formatAge with future time should return something")
+	}
+}
+
+func TestFormatSizeEdgeCases(t *testing.T) {
+	// Test large GiB value (formatSize only supports up to GiB)
+	result := formatSize(10737418240) // 10 GiB
+	if result == "" {
+		t.Error("formatSize should handle large GiB values")
+	}
+	if result != "10.0 GiB" {
+		t.Errorf("expected '10.0 GiB', got %s", result)
+	}
+}
