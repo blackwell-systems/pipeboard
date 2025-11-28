@@ -1,12 +1,25 @@
-- [Home](/)
-- [Getting Started](getting-started.md)
-- [Commands](commands.md)
-- [Transforms (fx)](transforms.md)
-- [Sync & Remote](sync.md)
-- [Configuration](configuration.md)
-- [Platforms](platforms.md)
+<!-- docs/_sidebar.md -->
 
----
+- **Getting Started**
+  - [Home](/)
+  - [Quick Start](getting-started.md)
+  - [Installation](getting-started.md#installation)
 
-- [Changelog](https://github.com/blackwell-systems/pipeboard/blob/main/CHANGELOG.md)
-- [Contributing](https://github.com/blackwell-systems/pipeboard/blob/main/CONTRIBUTING.md)
+- **Core Features**
+  - [Commands](commands.md)
+  - [Transforms (fx)](transforms.md)
+  - [Sync & Remote](sync.md)
+
+- **Reference**
+  - [Configuration](configuration.md)
+  - [Platform Support](platforms.md)
+
+- **Project**
+  - [Changelog](https://github.com/blackwell-systems/pipeboard/blob/main/CHANGELOG.md)
+  - [Contributing](https://github.com/blackwell-systems/pipeboard/blob/main/CONTRIBUTING.md)
+  - [Security](https://github.com/blackwell-systems/pipeboard/blob/main/SECURITY.md)
+
+- **Links**
+  - [![GitHub](https://icongr.am/simple/github.svg?size=16&colored=false) GitHub Repo](https://github.com/blackwell-systems/pipeboard)
+  - [![Issues](https://icongr.am/octicons/issue-opened.svg?size=16) Issues](https://github.com/blackwell-systems/pipeboard/issues)
+  - [![CI Status](https://img.shields.io/github/actions/workflow/status/blackwell-systems/pipeboard/ci.yml?branch=main)](https://github.com/blackwell-systems/pipeboard/actions)
