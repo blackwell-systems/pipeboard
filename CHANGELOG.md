@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Chained transforms** - `pipeboard fx name1 name2 name3` runs multiple transforms in sequence
+  - Output from each transform feeds into the next
+  - If any step fails, clipboard is unchanged (safety guarantee)
+- **History filters** - `pipeboard history --fx`, `--slots`, `--peer` to filter operations
+- **Native Windows support** - `BackendWindows` for direct Windows clipboard (not just WSL)
+  - Full image copy/paste support via PowerShell
+
+### Changed
+- History now shows most recent operations first
+- Improved help text with chaining examples and safety guarantees
+
 ## [0.4.0] - 2025-01-28
 
 ### Added

@@ -86,7 +86,7 @@ func main() {
 }
 
 func printHelp() {
-	fmt.Println(`pipeboard - tiny cross-platform clipboard CLI
+	fmt.Println(`pipeboard - the programmable clipboard router for terminals
 
 Usage:
   pipeboard <command> [args...]
@@ -100,10 +100,13 @@ Local clipboard:
   backend              Show detected clipboard backend
   doctor               Run environment checks
 
-Transforms (programmable clipboard actions):
-  fx <name>            Run transform on clipboard (in-place)
-  fx <name> --dry-run  Preview transform output without modifying clipboard
+Transforms (programmable clipboard pipelines):
+  fx <name> [name2...] Run transform(s) on clipboard (chained, in-place)
+  fx <name> --dry-run  Preview output without modifying clipboard
   fx --list            List available transforms
+
+  Chaining: pipeboard fx strip-ansi pretty-json
+  Safety: clipboard unchanged if any transform fails
 
 Direct peer-to-peer (SSH):
   send [peer]          Send local clipboard to peer's clipboard
@@ -111,13 +114,18 @@ Direct peer-to-peer (SSH):
   peek [peer]          Print peer's clipboard to stdout (no local change)
                        (peer defaults to 'defaults.peer' in config)
 
-Remote slots (optional sync backend):
+Remote slots (S3 backend):
   push <name>          Push clipboard to remote slot
   pull <name>          Pull remote slot into clipboard
   show <name>          Print remote slot to stdout
   slots                List remote slots
   rm <name>            Delete remote slot
-  history              Show recent operations
+
+History:
+  history              Show recent operations (most recent first)
+  history --fx         Filter to fx transforms only
+  history --slots      Filter to push/pull/show/rm only
+  history --peer       Filter to send/recv/peek only
 
 Other:
   help                 Show this help
@@ -947,8 +955,19 @@ func recordHistory(command, target string, size int64) {
 }
 
 func cmdHistory(args []string) error {
-	if len(args) > 0 {
-		return errors.New("history does not take arguments")
+	// Parse filter flags
+	var filterFx, filterSlots, filterPeer bool
+	for _, arg := range args {
+		switch arg {
+		case "--fx":
+			filterFx = true
+		case "--slots":
+			filterSlots = true
+		case "--peer":
+			filterPeer = true
+		default:
+			return fmt.Errorf("unknown flag: %s\nusage: pipeboard history [--fx] [--slots] [--peer]", arg)
+		}
 	}
 
 	path := getHistoryPath()
@@ -975,13 +994,35 @@ func cmdHistory(args []string) error {
 		return nil
 	}
 
-	fmt.Printf("%-20s  %-8s  %-15s  %s\n", "TIME", "COMMAND", "TARGET", "SIZE")
+	// Filter history if requested
+	var filtered []HistoryEntry
 	for _, h := range history {
+		if filterFx && !strings.HasPrefix(h.Command, "fx:") {
+			continue
+		}
+		if filterSlots && !isSlotCommand(h.Command) {
+			continue
+		}
+		if filterPeer && !isPeerCommand(h.Command) {
+			continue
+		}
+		filtered = append(filtered, h)
+	}
+
+	if len(filtered) == 0 {
+		fmt.Println("No matching history entries.")
+		return nil
+	}
+
+	// Show most recent first (reverse order)
+	fmt.Printf("%-20s  %-12s  %-15s  %s\n", "TIME", "COMMAND", "TARGET", "SIZE")
+	for i := len(filtered) - 1; i >= 0; i-- {
+		h := filtered[i]
 		sizeStr := ""
 		if h.Size > 0 {
 			sizeStr = formatSize(h.Size)
 		}
-		fmt.Printf("%-20s  %-8s  %-15s  %s\n",
+		fmt.Printf("%-20s  %-12s  %-15s  %s\n",
 			h.Timestamp.Format("2006-01-02 15:04:05"),
 			h.Command,
 			h.Target,
@@ -991,12 +1032,20 @@ func cmdHistory(args []string) error {
 	return nil
 }
 
-// cmdFx runs a user-defined clipboard transform
+func isSlotCommand(cmd string) bool {
+	return cmd == "push" || cmd == "pull" || cmd == "show" || cmd == "rm"
+}
+
+func isPeerCommand(cmd string) bool {
+	return cmd == "send" || cmd == "recv" || cmd == "peek"
+}
+
+// cmdFx runs a user-defined clipboard transform (supports chaining)
 func cmdFx(args []string) error {
-	// Parse flags
+	// Parse flags and collect transform names
 	var dryRun bool
 	var listMode bool
-	var fxName string
+	var fxNames []string
 
 	for _, arg := range args {
 		switch arg {
@@ -1008,11 +1057,7 @@ func cmdFx(args []string) error {
 			if strings.HasPrefix(arg, "-") {
 				return fmt.Errorf("unknown flag: %s", arg)
 			}
-			if fxName == "" {
-				fxName = arg
-			} else {
-				return fmt.Errorf("unexpected argument: %s", arg)
-			}
+			fxNames = append(fxNames, arg)
 		}
 	}
 
@@ -1026,15 +1071,19 @@ func cmdFx(args []string) error {
 		return fxList(cfg)
 	}
 
-	// Require transform name
-	if fxName == "" {
-		return fmt.Errorf("usage: pipeboard fx <name> [--dry-run]\n       pipeboard fx --list")
+	// Require at least one transform name
+	if len(fxNames) == 0 {
+		return fmt.Errorf("usage: pipeboard fx <name> [name2...] [--dry-run]\n       pipeboard fx --list")
 	}
 
-	// Look up transform
-	fx, err := cfg.getFx(fxName)
-	if err != nil {
-		return err
+	// Validate all transforms exist before reading clipboard
+	var transforms []FxConfig
+	for _, name := range fxNames {
+		fx, err := cfg.getFx(name)
+		if err != nil {
+			return err
+		}
+		transforms = append(transforms, fx)
 	}
 
 	// Read clipboard
@@ -1042,20 +1091,24 @@ func cmdFx(args []string) error {
 	if err != nil {
 		return fmt.Errorf("reading clipboard: %w", err)
 	}
+	originalSize := len(data)
 
-	// Run transform
-	cmdArgs := fx.getCommand()
-	result, err := runTransform(cmdArgs, data)
-	if err != nil {
-		return fmt.Errorf("transform %q failed: %w", fxName, err)
+	// Run transforms in order, feeding output → input
+	// If any step fails, abort without modifying clipboard
+	result := data
+	for i, fx := range transforms {
+		cmdArgs := fx.getCommand()
+		result, err = runTransform(cmdArgs, result)
+		if err != nil {
+			return fmt.Errorf("transform %q (step %d) failed: %w; clipboard unchanged", fxNames[i], i+1, err)
+		}
+		// Check for empty output
+		if len(result) == 0 {
+			return fmt.Errorf("transform %q (step %d) produced empty output; clipboard unchanged", fxNames[i], i+1)
+		}
 	}
 
-	// Check for empty output
-	if len(result) == 0 {
-		return fmt.Errorf("transform %q produced empty output; clipboard unchanged", fxName)
-	}
-
-	// Dry run mode - just print the result
+	// Dry run mode - print result to stdout, never touch clipboard
 	if dryRun {
 		_, err = os.Stdout.Write(result)
 		return err
@@ -1066,8 +1119,10 @@ func cmdFx(args []string) error {
 		return fmt.Errorf("writing clipboard: %w", err)
 	}
 
-	fmt.Printf("fx %s: %s → %s\n", fxName, formatSize(int64(len(data))), formatSize(int64(len(result))))
-	recordHistory("fx:"+fxName, "", int64(len(result)))
+	// Report what happened
+	chainDesc := strings.Join(fxNames, " → ")
+	fmt.Printf("fx %s: %s → %s\n", chainDesc, formatSize(int64(originalSize)), formatSize(int64(len(result))))
+	recordHistory("fx:"+chainDesc, "", int64(len(result)))
 	return nil
 }
 

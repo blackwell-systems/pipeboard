@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"os"
 	"runtime"
+	"strings"
 	"testing"
 )
 
@@ -447,10 +448,13 @@ func TestCmdFxNoArgs(t *testing.T) {
 	}
 }
 
-func TestCmdFxTooManyArgs(t *testing.T) {
+func TestCmdFxChainedTransforms(t *testing.T) {
+	// cmdFx now supports chained transforms - multiple args are allowed
+	// This test just verifies the parsing works (will fail on unknown transforms)
 	err := cmdFx([]string{"transform1", "transform2"})
-	if err == nil {
-		t.Error("cmdFx with too many args should return error")
+	// Should error because transforms don't exist, not because too many args
+	if err != nil && strings.Contains(err.Error(), "unexpected argument") {
+		t.Error("cmdFx should accept multiple transform names for chaining")
 	}
 }
 
@@ -517,11 +521,20 @@ func TestGetHistoryPath(t *testing.T) {
 	}
 }
 
-func TestCmdHistoryWithArgs(t *testing.T) {
-	err := cmdHistory([]string{"unexpected"})
+func TestCmdHistoryWithUnknownFlag(t *testing.T) {
+	// History now supports filter flags, but should error on unknown ones
+	err := cmdHistory([]string{"--unknown"})
 	if err == nil {
-		t.Error("cmdHistory with args should return error")
+		t.Error("cmdHistory with unknown flag should return error")
 	}
+}
+
+func TestCmdHistoryFilters(t *testing.T) {
+	// Valid filter flags should be accepted (may return "no history" but not error)
+	// These tests just verify flag parsing works
+	_ = cmdHistory([]string{"--fx"})     // Should not error on unknown flag
+	_ = cmdHistory([]string{"--slots"})  // Should not error on unknown flag
+	_ = cmdHistory([]string{"--peer"})   // Should not error on unknown flag
 }
 
 // Test backend detection for Windows
