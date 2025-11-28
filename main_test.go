@@ -309,7 +309,7 @@ func TestPrintHelp(t *testing.T) {
 		t.Error("printHelp should produce output")
 	}
 
-	// Check for key elements
+	// Check for key elements including new v2 commands
 	expectedStrings := []string{
 		"pipeboard",
 		"copy",
@@ -317,11 +317,79 @@ func TestPrintHelp(t *testing.T) {
 		"clear",
 		"backend",
 		"doctor",
+		"push",
+		"pull",
+		"show",
+		"slots",
+		"rm",
 	}
 
 	for _, s := range expectedStrings {
 		if !bytes.Contains([]byte(output), []byte(s)) {
 			t.Errorf("help output should contain %q", s)
 		}
+	}
+}
+
+func TestCmdPushNoArgs(t *testing.T) {
+	err := cmdPush([]string{})
+	if err == nil {
+		t.Error("cmdPush with no args should return error")
+	}
+}
+
+func TestCmdPushTooManyArgs(t *testing.T) {
+	err := cmdPush([]string{"slot1", "slot2"})
+	if err == nil {
+		t.Error("cmdPush with too many args should return error")
+	}
+}
+
+func TestCmdPullNoArgs(t *testing.T) {
+	err := cmdPull([]string{})
+	if err == nil {
+		t.Error("cmdPull with no args should return error")
+	}
+}
+
+func TestCmdPullTooManyArgs(t *testing.T) {
+	err := cmdPull([]string{"slot1", "slot2"})
+	if err == nil {
+		t.Error("cmdPull with too many args should return error")
+	}
+}
+
+func TestCmdShowNoArgs(t *testing.T) {
+	err := cmdShow([]string{})
+	if err == nil {
+		t.Error("cmdShow with no args should return error")
+	}
+}
+
+func TestCmdShowTooManyArgs(t *testing.T) {
+	err := cmdShow([]string{"slot1", "slot2"})
+	if err == nil {
+		t.Error("cmdShow with too many args should return error")
+	}
+}
+
+func TestCmdSlotsWithArgs(t *testing.T) {
+	err := cmdSlots([]string{"unexpected"})
+	if err == nil {
+		t.Error("cmdSlots with args should return error")
+	}
+}
+
+func TestCmdRmNoArgs(t *testing.T) {
+	err := cmdRm([]string{})
+	if err == nil {
+		t.Error("cmdRm with no args should return error")
+	}
+}
+
+func TestCmdRmTooManyArgs(t *testing.T) {
+	err := cmdRm([]string{"slot1", "slot2"})
+	if err == nil {
+		t.Error("cmdRm with too many args should return error")
 	}
 }

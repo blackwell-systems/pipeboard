@@ -62,10 +62,30 @@ func main() {
 		if err := cmdDoctor(rest); err != nil {
 			fatal(err)
 		}
+	case "push":
+		if err := cmdPush(rest); err != nil {
+			fatal(err)
+		}
+	case "pull":
+		if err := cmdPull(rest); err != nil {
+			fatal(err)
+		}
+	case "show":
+		if err := cmdShow(rest); err != nil {
+			fatal(err)
+		}
+	case "slots":
+		if err := cmdSlots(rest); err != nil {
+			fatal(err)
+		}
+	case "rm":
+		if err := cmdRm(rest); err != nil {
+			fatal(err)
+		}
 	case "help", "-h", "--help":
 		printHelp()
 	case "version", "-v", "--version":
-		fmt.Println("pipeboard v0.1.0")
+		fmt.Println("pipeboard v0.2.0")
 	default:
 		fmt.Fprintf(os.Stderr, "Unknown command: %s\n\n", cmd)
 		printHelp()
@@ -74,7 +94,7 @@ func main() {
 }
 
 func printHelp() {
-	fmt.Println(`pipeboard - tiny cross-platform clipboard CLI
+	fmt.Println(`pipeboard - tiny cross-platform clipboard CLI with remote sync
 
 Usage:
   pipeboard copy    [text]   # copy stdin or provided text to clipboard
@@ -82,6 +102,15 @@ Usage:
   pipeboard clear            # clear clipboard (best-effort)
   pipeboard backend          # show detected backend
   pipeboard doctor           # check dependencies and environment
+
+Remote sync (requires config):
+  pipeboard push   <name>    # push clipboard to remote slot
+  pipeboard pull   <name>    # pull from remote slot to clipboard
+  pipeboard show   <name>    # print remote slot to stdout
+  pipeboard slots            # list remote slots
+  pipeboard rm     <name>    # delete a remote slot
+
+Other:
   pipeboard help             # show this help
   pipeboard version          # show version
 
@@ -89,7 +118,12 @@ Examples:
   echo "hello" | pipeboard copy
   pipeboard copy "hello world"
   pipeboard paste | jq .
-  pipeboard clear`)
+
+  # Cross-machine sync
+  pipeboard push kube        # on laptop
+  pipeboard pull kube        # on server
+
+Config: ~/.config/pipeboard/config.yaml`)
 }
 
 func cmdCopy(args []string) error {
@@ -397,4 +431,172 @@ func readInputOrArgs(args []string) ([]byte, error) {
 func fatal(err error) {
 	fmt.Fprintf(os.Stderr, "pipeboard: %v\n", err)
 	os.Exit(1)
+}
+
+// readClipboard reads the current local clipboard contents
+func readClipboard() ([]byte, error) {
+	b, err := detectBackend()
+	if err != nil {
+		return nil, err
+	}
+	if len(b.Missing) > 0 {
+		return nil, fmt.Errorf("backend %s is missing required tools: %s", b.Kind, strings.Join(b.Missing, ", "))
+	}
+	if len(b.PasteCmd) == 0 {
+		return nil, errors.New("no paste command configured")
+	}
+
+	cmd := exec.Command(b.PasteCmd[0], b.PasteCmd[1:]...)
+	var out bytes.Buffer
+	cmd.Stdout = &out
+	cmd.Stderr = os.Stderr
+	if err := cmd.Run(); err != nil {
+		return nil, fmt.Errorf("reading clipboard: %w", err)
+	}
+	return out.Bytes(), nil
+}
+
+// writeClipboard writes data to the local clipboard
+func writeClipboard(data []byte) error {
+	b, err := detectBackend()
+	if err != nil {
+		return err
+	}
+	if len(b.Missing) > 0 {
+		return fmt.Errorf("backend %s is missing required tools: %s", b.Kind, strings.Join(b.Missing, ", "))
+	}
+	return runWithInput(b.CopyCmd, data)
+}
+
+func cmdPush(args []string) error {
+	if len(args) != 1 {
+		return fmt.Errorf("usage: pipeboard push <name>")
+	}
+	slot := args[0]
+
+	// Read from local clipboard
+	data, err := readClipboard()
+	if err != nil {
+		return err
+	}
+
+	// Get remote backend
+	backend, err := newRemoteBackendFromConfig()
+	if err != nil {
+		return err
+	}
+
+	host, _ := os.Hostname()
+	meta := map[string]string{"hostname": host}
+
+	// Push to remote
+	if err := backend.Push(slot, data, meta); err != nil {
+		return err
+	}
+
+	fmt.Printf("pushed %s to slot %q\n", formatSize(int64(len(data))), slot)
+	return nil
+}
+
+func cmdPull(args []string) error {
+	if len(args) != 1 {
+		return fmt.Errorf("usage: pipeboard pull <name>")
+	}
+	slot := args[0]
+
+	backend, err := newRemoteBackendFromConfig()
+	if err != nil {
+		return err
+	}
+
+	data, meta, err := backend.Pull(slot)
+	if err != nil {
+		return err
+	}
+
+	if err := writeClipboard(data); err != nil {
+		return err
+	}
+
+	host := meta["hostname"]
+	if host != "" {
+		fmt.Printf("pulled %s from slot %q (source: %s)\n", formatSize(int64(len(data))), slot, host)
+	} else {
+		fmt.Printf("pulled %s from slot %q\n", formatSize(int64(len(data))), slot)
+	}
+	return nil
+}
+
+func cmdShow(args []string) error {
+	if len(args) != 1 {
+		return fmt.Errorf("usage: pipeboard show <name>")
+	}
+	slot := args[0]
+
+	backend, err := newRemoteBackendFromConfig()
+	if err != nil {
+		return err
+	}
+
+	data, _, err := backend.Pull(slot)
+	if err != nil {
+		return err
+	}
+
+	// Write to stdout instead of clipboard
+	os.Stdout.Write(data)
+	return nil
+}
+
+func cmdSlots(args []string) error {
+	if len(args) > 0 {
+		return errors.New("slots does not take arguments")
+	}
+
+	backend, err := newRemoteBackendFromConfig()
+	if err != nil {
+		return err
+	}
+
+	slots, err := backend.List()
+	if err != nil {
+		return err
+	}
+
+	if len(slots) == 0 {
+		fmt.Println("No slots found.")
+		return nil
+	}
+
+	// Print header
+	fmt.Printf("%-20s  %-10s  %-12s\n", "NAME", "SIZE", "AGE")
+
+	for _, s := range slots {
+		fmt.Printf("%-20s  %-10s  %-12s\n",
+			s.Name,
+			formatSize(s.Size),
+			formatAge(s.CreatedAt),
+		)
+	}
+
+	return nil
+}
+
+func cmdRm(args []string) error {
+	if len(args) != 1 {
+		return fmt.Errorf("usage: pipeboard rm <name>")
+	}
+	slot := args[0]
+
+	backend, err := newRemoteBackendFromConfig()
+	if err != nil {
+		return err
+	}
+
+	if err := backend.Delete(slot); err != nil {
+		return err
+	}
+
+	fmt.Printf("deleted slot %q\n", slot)
+	return nil
 }
