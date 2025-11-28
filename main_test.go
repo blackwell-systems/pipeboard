@@ -6,6 +6,7 @@ import (
 	"runtime"
 	"strings"
 	"testing"
+	"time"
 )
 
 func TestBackendKindConstants(t *testing.T) {
@@ -856,5 +857,220 @@ func TestIsPeerCommand(t *testing.T) {
 		if isPeerCommand(cmd) {
 			t.Errorf("isPeerCommand(%q) should return false", cmd)
 		}
+	}
+}
+
+// Test runCommand
+func TestRunCommand(t *testing.T) {
+	t.Run("empty command", func(t *testing.T) {
+		err := runCommand([]string{})
+		if err == nil {
+			t.Error("expected error for empty command")
+		}
+	})
+
+	t.Run("successful command", func(t *testing.T) {
+		err := runCommand([]string{"true"})
+		if err != nil {
+			t.Errorf("unexpected error: %v", err)
+		}
+	})
+
+	t.Run("failing command", func(t *testing.T) {
+		err := runCommand([]string{"false"})
+		if err == nil {
+			t.Error("expected error for failing command")
+		}
+	})
+}
+
+// Test runWithInput
+func TestRunWithInput(t *testing.T) {
+	t.Run("empty command", func(t *testing.T) {
+		err := runWithInput([]string{}, []byte("test"))
+		if err == nil {
+			t.Error("expected error for empty command")
+		}
+	})
+
+	t.Run("successful command with input", func(t *testing.T) {
+		err := runWithInput([]string{"cat"}, []byte("test"))
+		if err != nil {
+			t.Errorf("unexpected error: %v", err)
+		}
+	})
+
+	t.Run("failing command", func(t *testing.T) {
+		err := runWithInput([]string{"false"}, []byte("test"))
+		if err == nil {
+			t.Error("expected error for failing command")
+		}
+	})
+}
+
+// Test runAndPipeStdout
+func TestRunAndPipeStdout(t *testing.T) {
+	t.Run("empty command", func(t *testing.T) {
+		err := runAndPipeStdout([]string{})
+		if err == nil {
+			t.Error("expected error for empty command")
+		}
+	})
+
+	t.Run("successful command", func(t *testing.T) {
+		err := runAndPipeStdout([]string{"true"})
+		if err != nil {
+			t.Errorf("unexpected error: %v", err)
+		}
+	})
+}
+
+// Test cmdClear error paths
+func TestCmdClearNoPanic(t *testing.T) {
+	// cmdClear will fail in test environment without proper clipboard
+	// but we can test that it handles errors gracefully
+	err := cmdClear([]string{})
+	// We expect an error because there's no clipboard in test env
+	_ = err // Just verify it doesn't panic
+}
+
+// Test cmdBackend runs
+func TestCmdBackendNoPanic(t *testing.T) {
+	// cmdBackend will work on any system, just prints the backend
+	err := cmdBackend([]string{})
+	// May succeed or fail depending on environment
+	_ = err // Just verify it doesn't panic
+}
+
+// Test cmdDoctor runs without panic
+func TestCmdDoctorNoPanic(t *testing.T) {
+	// cmdDoctor should run without panicking
+	err := cmdDoctor([]string{})
+	_ = err // Just verify no panic
+}
+
+// Test cmdHistory with various filter combinations
+func TestCmdHistoryFilterCombinations(t *testing.T) {
+	// Set up temp history file
+	tmpDir := t.TempDir()
+	origXDG := os.Getenv("XDG_CONFIG_HOME")
+	defer func() {
+		if origXDG != "" {
+			_ = os.Setenv("XDG_CONFIG_HOME", origXDG)
+		} else {
+			_ = os.Unsetenv("XDG_CONFIG_HOME")
+		}
+	}()
+	_ = os.Setenv("XDG_CONFIG_HOME", tmpDir)
+
+	// Record some history entries
+	recordHistory("push", "slot1", 100)
+	recordHistory("send", "peer1", 50)
+	recordHistory("fx", "pretty-json", 200)
+
+	// Test each filter
+	testCases := []struct {
+		name string
+		args []string
+	}{
+		{"no filter", []string{}},
+		{"fx filter", []string{"--fx"}},
+		{"slots filter", []string{"--slots"}},
+		{"peer filter", []string{"--peer"}},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			err := cmdHistory(tc.args)
+			if err != nil {
+				t.Errorf("cmdHistory(%v) error: %v", tc.args, err)
+			}
+		})
+	}
+}
+
+// Test detectDarwin always returns a backend
+func TestDetectDarwinReturnsBackend(t *testing.T) {
+	b, err := detectDarwin()
+	if err != nil {
+		t.Fatalf("detectDarwin() error: %v", err)
+	}
+	if b == nil {
+		t.Fatal("detectDarwin() should return a backend")
+	}
+	if b.Kind != BackendDarwin {
+		t.Errorf("expected BackendDarwin, got %s", b.Kind)
+	}
+	if len(b.CopyCmd) == 0 {
+		t.Error("CopyCmd should not be empty")
+	}
+	if len(b.PasteCmd) == 0 {
+		t.Error("PasteCmd should not be empty")
+	}
+}
+
+// Test HistoryEntry struct
+func TestHistoryEntryFields(t *testing.T) {
+	entry := HistoryEntry{
+		Timestamp: time.Now(),
+		Command:   "push",
+		Target:    "myslot",
+		Size:      100,
+	}
+
+	if entry.Command != "push" {
+		t.Error("Command field mismatch")
+	}
+	if entry.Target != "myslot" {
+		t.Error("Target field mismatch")
+	}
+	if entry.Size != 100 {
+		t.Error("Size field mismatch")
+	}
+}
+
+// Test detectWSL returns a backend struct
+func TestDetectWSLReturns(t *testing.T) {
+	b := detectWSL()
+	// detectWSL returns nil if clip.exe is not found (which is expected in non-WSL env)
+	// We just verify it doesn't panic
+	if b != nil {
+		if b.Kind != BackendWSL {
+			t.Errorf("expected BackendWSL, got %s", b.Kind)
+		}
+	}
+}
+
+// Test cmdFx with dry-run flag
+func TestCmdFxDryRun(t *testing.T) {
+	// Create a temporary config with a simple transform
+	tmpDir := t.TempDir()
+	configFile := tmpDir + "/config.yaml"
+
+	configContent := `fx:
+  test-transform:
+    cmd: ["cat"]
+    description: "Test transform"
+`
+	if err := os.WriteFile(configFile, []byte(configContent), 0644); err != nil {
+		t.Fatalf("failed to write config: %v", err)
+	}
+
+	origConfig := os.Getenv("PIPEBOARD_CONFIG")
+	defer func() {
+		if origConfig != "" {
+			_ = os.Setenv("PIPEBOARD_CONFIG", origConfig)
+		} else {
+			_ = os.Unsetenv("PIPEBOARD_CONFIG")
+		}
+	}()
+
+	_ = os.Setenv("PIPEBOARD_CONFIG", configFile)
+
+	// Test --dry-run flag (will fail due to no clipboard, but tests flag parsing)
+	err := cmdFx([]string{"test-transform", "--dry-run"})
+	// Expected to fail due to clipboard access, but should not be a flag parsing error
+	if err != nil && strings.Contains(err.Error(), "unexpected") {
+		t.Error("--dry-run flag should be recognized")
 	}
 }

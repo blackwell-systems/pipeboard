@@ -715,3 +715,139 @@ sync:
 		t.Errorf("expected region 'eu-west-1', got %s", cfg.Sync.S3.Region)
 	}
 }
+
+func TestApplyBackendEnv(t *testing.T) {
+	t.Run("sets backend when env var is set", func(t *testing.T) {
+		orig := os.Getenv("PIPEBOARD_BACKEND")
+		defer restoreEnv("PIPEBOARD_BACKEND", orig)
+
+		_ = os.Setenv("PIPEBOARD_BACKEND", "s3")
+
+		cfg := &Config{}
+		applyBackendEnv(cfg)
+
+		if cfg.Sync == nil {
+			t.Fatal("Sync should be created")
+		}
+		if cfg.Sync.Backend != "s3" {
+			t.Errorf("expected backend 's3', got %s", cfg.Sync.Backend)
+		}
+	})
+
+	t.Run("does nothing when env var not set", func(t *testing.T) {
+		orig := os.Getenv("PIPEBOARD_BACKEND")
+		defer restoreEnv("PIPEBOARD_BACKEND", orig)
+
+		_ = os.Unsetenv("PIPEBOARD_BACKEND")
+
+		cfg := &Config{}
+		applyBackendEnv(cfg)
+
+		if cfg.Sync != nil {
+			t.Error("Sync should remain nil when env not set")
+		}
+	})
+
+	t.Run("uses existing sync when present", func(t *testing.T) {
+		orig := os.Getenv("PIPEBOARD_BACKEND")
+		defer restoreEnv("PIPEBOARD_BACKEND", orig)
+
+		_ = os.Setenv("PIPEBOARD_BACKEND", "s3")
+
+		cfg := &Config{
+			Sync: &SyncConfig{
+				Passphrase: "existing-passphrase",
+			},
+		}
+		applyBackendEnv(cfg)
+
+		if cfg.Sync.Backend != "s3" {
+			t.Errorf("expected backend 's3', got %s", cfg.Sync.Backend)
+		}
+		if cfg.Sync.Passphrase != "existing-passphrase" {
+			t.Error("existing config should be preserved")
+		}
+	})
+}
+
+func TestApplyS3EnvAllVars(t *testing.T) {
+	// Save all original env vars
+	envVars := []string{
+		"PIPEBOARD_S3_BUCKET",
+		"PIPEBOARD_S3_REGION",
+		"PIPEBOARD_S3_PREFIX",
+		"PIPEBOARD_S3_PROFILE",
+		"PIPEBOARD_S3_SSE",
+	}
+	origVals := make(map[string]string)
+	for _, v := range envVars {
+		origVals[v] = os.Getenv(v)
+	}
+	defer func() {
+		for k, v := range origVals {
+			restoreEnv(k, v)
+		}
+	}()
+
+	// Set all env vars
+	_ = os.Setenv("PIPEBOARD_S3_BUCKET", "test-bucket")
+	_ = os.Setenv("PIPEBOARD_S3_REGION", "us-east-1")
+	_ = os.Setenv("PIPEBOARD_S3_PREFIX", "prefix/")
+	_ = os.Setenv("PIPEBOARD_S3_PROFILE", "test-profile")
+	_ = os.Setenv("PIPEBOARD_S3_SSE", "AES256")
+
+	cfg := &Config{}
+	applyS3Env(cfg)
+
+	if cfg.Sync == nil || cfg.Sync.S3 == nil {
+		t.Fatal("Sync and S3 should be created")
+	}
+	if cfg.Sync.S3.Bucket != "test-bucket" {
+		t.Errorf("expected bucket 'test-bucket', got %s", cfg.Sync.S3.Bucket)
+	}
+	if cfg.Sync.S3.Region != "us-east-1" {
+		t.Errorf("expected region 'us-east-1', got %s", cfg.Sync.S3.Region)
+	}
+	if cfg.Sync.S3.Prefix != "prefix/" {
+		t.Errorf("expected prefix 'prefix/', got %s", cfg.Sync.S3.Prefix)
+	}
+	if cfg.Sync.S3.Profile != "test-profile" {
+		t.Errorf("expected profile 'test-profile', got %s", cfg.Sync.S3.Profile)
+	}
+	if cfg.Sync.S3.SSE != "AES256" {
+		t.Errorf("expected SSE 'AES256', got %s", cfg.Sync.S3.SSE)
+	}
+	if cfg.Sync.Backend != "s3" {
+		t.Errorf("expected backend 's3', got %s", cfg.Sync.Backend)
+	}
+}
+
+func TestGetPeerProd(t *testing.T) {
+	cfg := &Config{
+		Peers: map[string]PeerConfig{
+			"dev":  {SSH: "devbox"},
+			"prod": {SSH: "prod-server"},
+		},
+	}
+
+	peer, err := cfg.getPeer("prod")
+	if err != nil {
+		t.Fatalf("getPeer() error: %v", err)
+	}
+	if peer.SSH != "prod-server" {
+		t.Errorf("expected SSH 'prod-server', got %s", peer.SSH)
+	}
+}
+
+func TestValidateSyncConfigNilS3(t *testing.T) {
+	cfg := &Config{
+		Sync: &SyncConfig{
+			Backend: "s3",
+			S3:      nil,
+		},
+	}
+	err := validateSyncConfig(cfg)
+	if err == nil {
+		t.Error("expected error for nil S3 config with s3 backend")
+	}
+}
