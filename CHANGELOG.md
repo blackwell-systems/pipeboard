@@ -8,6 +8,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Docsify documentation site** - Dark-themed docs with cover page, matching Blackwell Systems style
+- **Codecov integration** - Code coverage tracking in CI
+
+### Changed
+- Test coverage improved from 43% to 64%
+
+## [0.5.0] - 2025-11-28
+
+### Added
 - **Chained transforms** - `pipeboard fx name1 name2 name3` runs multiple transforms in sequence
   - Output from each transform feeds into the next
   - If any step fails, clipboard is unchanged (safety guarantee)
@@ -67,7 +76,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - SSH transport for peer sync
 - Optional S3 server-side encryption (AES256/KMS)
 
-[Unreleased]: https://github.com/blackwell-systems/pipeboard/compare/v0.4.0...HEAD
+[Unreleased]: https://github.com/blackwell-systems/pipeboard/compare/v0.5.0...HEAD
+[0.5.0]: https://github.com/blackwell-systems/pipeboard/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/blackwell-systems/pipeboard/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/blackwell-systems/pipeboard/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/blackwell-systems/pipeboard/compare/v0.1.0...v0.2.0
