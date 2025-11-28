@@ -149,6 +149,10 @@ Config file: `~/.config/pipeboard/config.yaml`
 ```yaml
 version: 1
 
+# Default settings
+defaults:
+  peer: dev                  # default peer for send/recv/peek (optional)
+
 # Direct peer-to-peer via SSH
 peers:
   dev:
@@ -162,12 +166,15 @@ peers:
 # Optional remote sync backend
 sync:
   backend: s3                # or "none"
+  encryption: aes256         # optional: client-side encryption
+  passphrase: your-secret    # required if encryption is aes256
+  ttl_days: 30               # optional: auto-expire slots after N days
   s3:
     bucket: your-bucket-name
     region: us-west-2
     prefix: username/slots/  # optional
     profile: pipeboard       # optional AWS profile
-    sse: AES256              # optional: AES256 or aws:kms
+    sse: AES256              # optional: AES256 or aws:kms (server-side)
 ```
 
 ### Environment Variables
@@ -191,14 +198,15 @@ PIPEBOARD_S3_SSE           # server-side encryption
 | `clear` | Clear the clipboard |
 | `backend` | Show detected clipboard backend |
 | `doctor` | Check dependencies and environment |
-| `send <peer>` | Send clipboard to peer via SSH |
-| `recv <peer>` | Receive from peer via SSH |
-| `peek <peer>` | Print peer's clipboard to stdout |
+| `send [peer]` | Send clipboard to peer via SSH (uses default if no peer) |
+| `recv [peer]` | Receive from peer via SSH (uses default if no peer) |
+| `peek [peer]` | Print peer's clipboard to stdout (uses default if no peer) |
 | `push <name>` | Push clipboard to remote slot |
 | `pull <name>` | Pull from remote slot to clipboard |
 | `show <name>` | Print remote slot to stdout |
 | `slots` | List remote slots |
 | `rm <name>` | Delete a remote slot |
+| `history` | Show recent operations |
 | `help` | Show help |
 | `version` | Show version |
 

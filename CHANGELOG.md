@@ -7,11 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Planned
-- **Default peer** - `pipeboard send` without argument uses `defaults.peer` from config
-- **Encryption at rest** - Client-side encryption for S3 slot contents
-- **Slot expiry** - Auto-delete slots after configurable TTL
-- **History command** - `pipeboard history` to show recent local operations
+## [0.2.0] - 2025-01-28
+
+### Added
+- **Default peer** - `pipeboard send`, `recv`, and `peek` without argument uses `defaults.peer` from config
+- **Client-side encryption** - AES-256-GCM encryption for S3 slot contents with PBKDF2 key derivation
+- **Slot expiry/TTL** - Auto-delete slots after configurable TTL via `sync.ttl_days` config
+- **History command** - `pipeboard history` to show recent operations (push, pull, send, recv, peek)
+
+### Security
+- Client-side encryption uses secure cryptographic primitives (AES-256-GCM, PBKDF2 with 100k iterations)
+- Encrypted payloads stored in S3 cannot be decrypted without the passphrase
 
 ## [0.1.0] - 2025-01-28
 
@@ -31,5 +37,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - SSH transport for peer sync
 - Optional S3 server-side encryption (AES256/KMS)
 
-[Unreleased]: https://github.com/blackwell-systems/pipeboard/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/blackwell-systems/pipeboard/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/blackwell-systems/pipeboard/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/blackwell-systems/pipeboard/releases/tag/v0.1.0
