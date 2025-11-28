@@ -41,59 +41,31 @@ func main() {
 	cmd := args[0]
 	rest := args[1:]
 
+	commands := map[string]func([]string) error{
+		"copy":    cmdCopy,
+		"paste":   cmdPaste,
+		"clear":   cmdClear,
+		"backend": cmdBackend,
+		"doctor":  cmdDoctor,
+		"push":    cmdPush,
+		"pull":    cmdPull,
+		"show":    cmdShow,
+		"slots":   cmdSlots,
+		"rm":      cmdRm,
+		"send":    cmdSend,
+		"recv":    cmdRecv,
+		"receive": cmdRecv,
+		"peek":    cmdPeek,
+	}
+
+	if fn, ok := commands[cmd]; ok {
+		if err := fn(rest); err != nil {
+			fatal(err)
+		}
+		return
+	}
+
 	switch cmd {
-	case "copy":
-		if err := cmdCopy(rest); err != nil {
-			fatal(err)
-		}
-	case "paste":
-		if err := cmdPaste(rest); err != nil {
-			fatal(err)
-		}
-	case "clear":
-		if err := cmdClear(rest); err != nil {
-			fatal(err)
-		}
-	case "backend":
-		if err := cmdBackend(rest); err != nil {
-			fatal(err)
-		}
-	case "doctor":
-		if err := cmdDoctor(rest); err != nil {
-			fatal(err)
-		}
-	case "push":
-		if err := cmdPush(rest); err != nil {
-			fatal(err)
-		}
-	case "pull":
-		if err := cmdPull(rest); err != nil {
-			fatal(err)
-		}
-	case "show":
-		if err := cmdShow(rest); err != nil {
-			fatal(err)
-		}
-	case "slots":
-		if err := cmdSlots(rest); err != nil {
-			fatal(err)
-		}
-	case "rm":
-		if err := cmdRm(rest); err != nil {
-			fatal(err)
-		}
-	case "send":
-		if err := cmdSend(rest); err != nil {
-			fatal(err)
-		}
-	case "recv", "receive":
-		if err := cmdRecv(rest); err != nil {
-			fatal(err)
-		}
-	case "peek":
-		if err := cmdPeek(rest); err != nil {
-			fatal(err)
-		}
 	case "help", "-h", "--help":
 		printHelp()
 	case "version", "-v", "--version":

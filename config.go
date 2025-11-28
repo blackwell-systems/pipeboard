@@ -130,50 +130,64 @@ func applyDefaults(cfg *Config) {
 }
 
 func applyEnvOverrides(cfg *Config) {
-	// Handle legacy config format (backend at root level)
+	applyLegacyConfig(cfg)
+	applyBackendEnv(cfg)
+	applyS3Env(cfg)
+}
+
+func applyLegacyConfig(cfg *Config) {
 	if cfg.Backend != "" && cfg.Sync == nil {
 		cfg.Sync = &SyncConfig{
 			Backend: cfg.Backend,
 			S3:      cfg.S3,
 		}
 	}
+}
 
+func applyBackendEnv(cfg *Config) {
 	if v := os.Getenv("PIPEBOARD_BACKEND"); v != "" {
 		if cfg.Sync == nil {
 			cfg.Sync = &SyncConfig{}
 		}
 		cfg.Sync.Backend = v
 	}
+}
 
-	// S3 env overrides
-	if cfg.Sync != nil && cfg.Sync.S3 == nil {
+func ensureSyncS3(cfg *Config) {
+	if cfg.Sync == nil {
+		cfg.Sync = &SyncConfig{S3: &S3Config{}}
+	}
+	if cfg.Sync.S3 == nil {
 		cfg.Sync.S3 = &S3Config{}
 	}
+}
 
+func applyS3Env(cfg *Config) {
 	if v := os.Getenv("PIPEBOARD_S3_BUCKET"); v != "" {
-		if cfg.Sync == nil {
-			cfg.Sync = &SyncConfig{S3: &S3Config{}}
-		}
-		if cfg.Sync.S3 == nil {
-			cfg.Sync.S3 = &S3Config{}
-		}
+		ensureSyncS3(cfg)
 		cfg.Sync.S3.Bucket = v
 		if cfg.Sync.Backend == "" {
 			cfg.Sync.Backend = "s3"
 		}
 	}
-	if cfg.Sync != nil && cfg.Sync.S3 != nil {
-		if v := os.Getenv("PIPEBOARD_S3_REGION"); v != "" {
-			cfg.Sync.S3.Region = v
-		}
-		if v := os.Getenv("PIPEBOARD_S3_PREFIX"); v != "" {
-			cfg.Sync.S3.Prefix = v
-		}
-		if v := os.Getenv("PIPEBOARD_S3_PROFILE"); v != "" {
-			cfg.Sync.S3.Profile = v
-		}
-		if v := os.Getenv("PIPEBOARD_S3_SSE"); v != "" {
-			cfg.Sync.S3.SSE = v
+
+	if cfg.Sync == nil || cfg.Sync.S3 == nil {
+		return
+	}
+
+	envMappings := []struct {
+		env  string
+		dest *string
+	}{
+		{"PIPEBOARD_S3_REGION", &cfg.Sync.S3.Region},
+		{"PIPEBOARD_S3_PREFIX", &cfg.Sync.S3.Prefix},
+		{"PIPEBOARD_S3_PROFILE", &cfg.Sync.S3.Profile},
+		{"PIPEBOARD_S3_SSE", &cfg.Sync.S3.SSE},
+	}
+
+	for _, m := range envMappings {
+		if v := os.Getenv(m.env); v != "" {
+			*m.dest = v
 		}
 	}
 }
