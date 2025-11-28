@@ -309,7 +309,7 @@ func TestPrintHelp(t *testing.T) {
 		t.Error("printHelp should produce output")
 	}
 
-	// Check for key elements including new v2 commands
+	// Check for key elements including v3 commands
 	expectedStrings := []string{
 		"pipeboard",
 		"copy",
@@ -322,6 +322,9 @@ func TestPrintHelp(t *testing.T) {
 		"show",
 		"slots",
 		"rm",
+		"send",
+		"recv",
+		"peek",
 	}
 
 	for _, s := range expectedStrings {
@@ -391,5 +394,47 @@ func TestCmdRmTooManyArgs(t *testing.T) {
 	err := cmdRm([]string{"slot1", "slot2"})
 	if err == nil {
 		t.Error("cmdRm with too many args should return error")
+	}
+}
+
+func TestCmdSendNoArgs(t *testing.T) {
+	err := cmdSend([]string{})
+	if err == nil {
+		t.Error("cmdSend with no args should return error")
+	}
+}
+
+func TestCmdSendTooManyArgs(t *testing.T) {
+	err := cmdSend([]string{"peer1", "peer2"})
+	if err == nil {
+		t.Error("cmdSend with too many args should return error")
+	}
+}
+
+func TestCmdRecvNoArgs(t *testing.T) {
+	err := cmdRecv([]string{})
+	if err == nil {
+		t.Error("cmdRecv with no args should return error")
+	}
+}
+
+func TestCmdRecvTooManyArgs(t *testing.T) {
+	err := cmdRecv([]string{"peer1", "peer2"})
+	if err == nil {
+		t.Error("cmdRecv with too many args should return error")
+	}
+}
+
+func TestCmdPeekNoArgs(t *testing.T) {
+	err := cmdPeek([]string{})
+	if err == nil {
+		t.Error("cmdPeek with no args should return error")
+	}
+}
+
+func TestCmdPeekTooManyArgs(t *testing.T) {
+	err := cmdPeek([]string{"peer1", "peer2"})
+	if err == nil {
+		t.Error("cmdPeek with too many args should return error")
 	}
 }

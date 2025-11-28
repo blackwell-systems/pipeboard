@@ -1,6 +1,6 @@
 # pipeboard
 
-A tiny cross-platform clipboard CLI with optional remote sync.
+A tiny cross-platform clipboard CLI with peer-to-peer SSH sync and optional S3 remote slots.
 
 ## Installation
 
@@ -43,9 +43,37 @@ pipeboard backend
 pipeboard doctor
 ```
 
-### Remote Sync
+### Direct Peer-to-Peer (SSH)
 
-Sync clipboard contents across machines via S3:
+Send clipboard contents directly between machines via SSH:
+
+```bash
+# Send local clipboard to peer's clipboard
+pipeboard send dev
+
+# Receive peer's clipboard into local clipboard
+pipeboard recv dev
+
+# View peer's clipboard without copying locally
+pipeboard peek dev
+```
+
+**Example workflow:**
+
+```bash
+# On laptop: send to devbox
+pipeboard send dev
+
+# On laptop: receive from devbox
+pipeboard recv dev
+
+# On laptop: peek at devbox clipboard
+pipeboard peek dev | head
+```
+
+### Remote Slots (S3)
+
+Store clipboard contents in named slots for async access:
 
 ```bash
 # Push local clipboard to a named slot
@@ -67,11 +95,11 @@ pipeboard rm myslot
 **Example workflow:**
 
 ```bash
-# On laptop:
+# On laptop
 cat ~/.kube/config | pipeboard copy
 pipeboard push kube
 
-# On server:
+# On server
 pipeboard pull kube
 pipeboard paste > ~/.kube/config
 ```
@@ -84,34 +112,63 @@ alias pb='pipeboard'
 
 ## Configuration
 
-Remote sync requires a config file at `~/.config/pipeboard/config.yaml`:
+Config file: `~/.config/pipeboard/config.yaml`
 
 ```yaml
-backend: s3
+version: 1
 
-s3:
-  bucket: your-bucket-name
-  region: us-west-2
-  prefix: your-username/slots/   # optional
-  profile: pipeboard             # optional AWS profile
-  sse: AES256                    # optional: AES256 or aws:kms
+# Direct peer-to-peer via SSH
+peers:
+  dev:
+    ssh: devbox              # SSH host/alias from ~/.ssh/config
+    remote_cmd: pipeboard    # optional, default: pipeboard
+  mac:
+    ssh: dayna-mac.local
+  wsl:
+    ssh: wsl-host
+
+# Optional remote sync backend
+sync:
+  backend: s3                # or "none"
+  s3:
+    bucket: your-bucket-name
+    region: us-west-2
+    prefix: username/slots/  # optional
+    profile: pipeboard       # optional AWS profile
+    sse: AES256              # optional: AES256 or aws:kms
 ```
 
-Environment variable overrides:
+### Environment Variables
 
 ```bash
-PIPEBOARD_S3_BUCKET=my-bucket pipeboard push test
-PIPEBOARD_S3_REGION=us-east-1 pipeboard slots
+PIPEBOARD_CONFIG           # config file path
+PIPEBOARD_BACKEND          # sync backend type
+PIPEBOARD_S3_BUCKET        # S3 bucket name
+PIPEBOARD_S3_REGION        # AWS region
+PIPEBOARD_S3_PREFIX        # key prefix
+PIPEBOARD_S3_PROFILE       # AWS profile name
+PIPEBOARD_S3_SSE           # server-side encryption
 ```
 
-All environment variables:
-- `PIPEBOARD_CONFIG` - config file path
-- `PIPEBOARD_BACKEND` - backend type (s3)
-- `PIPEBOARD_S3_BUCKET` - S3 bucket name
-- `PIPEBOARD_S3_REGION` - AWS region
-- `PIPEBOARD_S3_PREFIX` - key prefix
-- `PIPEBOARD_S3_PROFILE` - AWS profile name
-- `PIPEBOARD_S3_SSE` - server-side encryption
+## Commands
+
+| Command | Description |
+|---------|-------------|
+| `copy [text]` | Copy stdin or provided text to clipboard |
+| `paste` | Output clipboard contents to stdout |
+| `clear` | Clear the clipboard |
+| `backend` | Show detected clipboard backend |
+| `doctor` | Check dependencies and environment |
+| `send <peer>` | Send clipboard to peer via SSH |
+| `recv <peer>` | Receive from peer via SSH |
+| `peek <peer>` | Print peer's clipboard to stdout |
+| `push <name>` | Push clipboard to remote slot |
+| `pull <name>` | Pull from remote slot to clipboard |
+| `show <name>` | Print remote slot to stdout |
+| `slots` | List remote slots |
+| `rm <name>` | Delete a remote slot |
+| `help` | Show help |
+| `version` | Show version |
 
 ## Supported Backends
 
@@ -132,23 +189,6 @@ Backend detection is automatic based on environment variables (`WAYLAND_DISPLAY`
 |---------|---------|------|
 | s3 | AWS S3 | AWS credentials/profile |
 
-## Commands
-
-| Command | Description |
-|---------|-------------|
-| `copy [text]` | Copy stdin or provided text to clipboard |
-| `paste` | Output clipboard contents to stdout |
-| `clear` | Clear the clipboard |
-| `backend` | Show detected clipboard backend |
-| `doctor` | Check dependencies and environment |
-| `push <name>` | Push clipboard to remote slot |
-| `pull <name>` | Pull from remote slot to clipboard |
-| `show <name>` | Print remote slot to stdout |
-| `slots` | List remote slots |
-| `rm <name>` | Delete a remote slot |
-| `help` | Show help |
-| `version` | Show version |
-
 ## Requirements
 
 ### Local Clipboard
@@ -158,7 +198,12 @@ Backend detection is automatic based on environment variables (`WAYLAND_DISPLAY`
 - **X11**: `xclip` or `xsel` package
 - **WSL**: Windows clipboard tools should be available automatically
 
-### Remote Sync
+### Peer-to-Peer (SSH)
+
+- SSH access to peer machines
+- pipeboard installed on remote machines
+
+### Remote Sync (S3)
 
 - AWS credentials configured (via environment, profile, or IAM role)
 - S3 bucket with appropriate permissions

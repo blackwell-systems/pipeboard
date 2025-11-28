@@ -82,10 +82,22 @@ func main() {
 		if err := cmdRm(rest); err != nil {
 			fatal(err)
 		}
+	case "send":
+		if err := cmdSend(rest); err != nil {
+			fatal(err)
+		}
+	case "recv", "receive":
+		if err := cmdRecv(rest); err != nil {
+			fatal(err)
+		}
+	case "peek":
+		if err := cmdPeek(rest); err != nil {
+			fatal(err)
+		}
 	case "help", "-h", "--help":
 		printHelp()
 	case "version", "-v", "--version":
-		fmt.Println("pipeboard v0.2.0")
+		fmt.Println("pipeboard v0.3.0")
 	default:
 		fmt.Fprintf(os.Stderr, "Unknown command: %s\n\n", cmd)
 		printHelp()
@@ -94,36 +106,52 @@ func main() {
 }
 
 func printHelp() {
-	fmt.Println(`pipeboard - tiny cross-platform clipboard CLI with remote sync
+	fmt.Println(`pipeboard - tiny cross-platform clipboard CLI
 
 Usage:
-  pipeboard copy    [text]   # copy stdin or provided text to clipboard
-  pipeboard paste            # paste clipboard contents to stdout
-  pipeboard clear            # clear clipboard (best-effort)
-  pipeboard backend          # show detected backend
-  pipeboard doctor           # check dependencies and environment
+  pipeboard <command> [args...]
 
-Remote sync (requires config):
-  pipeboard push   <name>    # push clipboard to remote slot
-  pipeboard pull   <name>    # pull from remote slot to clipboard
-  pipeboard show   <name>    # print remote slot to stdout
-  pipeboard slots            # list remote slots
-  pipeboard rm     <name>    # delete a remote slot
+Local clipboard:
+  copy [text]          Copy stdin or provided text to clipboard
+  paste                Paste clipboard contents to stdout
+  clear                Clear clipboard (best-effort)
+  backend              Show detected clipboard backend
+  doctor               Run environment checks
+
+Direct peer-to-peer (SSH):
+  send <peer>          Send local clipboard to peer's clipboard
+  recv <peer>          Receive peer's clipboard into local clipboard
+  peek <peer>          Print peer's clipboard to stdout (no local change)
+
+Remote slots (optional sync backend):
+  push <name>          Push clipboard to remote slot
+  pull <name>          Pull remote slot into clipboard
+  show <name>          Print remote slot to stdout
+  slots                List remote slots
+  rm <name>            Delete remote slot
 
 Other:
-  pipeboard help             # show this help
-  pipeboard version          # show version
+  help                 Show this help
+  version              Show version
+
+Config: ~/.config/pipeboard/config.yaml
+
+  peers:
+    dev:
+      ssh: devbox
+
+  sync:
+    backend: s3
+    s3:
+      bucket: my-bucket
+      region: us-west-2
 
 Examples:
   echo "hello" | pipeboard copy
-  pipeboard copy "hello world"
   pipeboard paste | jq .
-
-  # Cross-machine sync
-  pipeboard push kube        # on laptop
-  pipeboard pull kube        # on server
-
-Config: ~/.config/pipeboard/config.yaml`)
+  pipeboard send dev
+  pipeboard recv dev
+  pipeboard push kube && ssh server "pipeboard pull kube"`)
 }
 
 func cmdCopy(args []string) error {
@@ -598,5 +626,110 @@ func cmdRm(args []string) error {
 	}
 
 	fmt.Printf("deleted slot %q\n", slot)
+	return nil
+}
+
+func cmdSend(args []string) error {
+	if len(args) != 1 {
+		return fmt.Errorf("usage: pipeboard send <peer>")
+	}
+	peerName := args[0]
+
+	cfg, err := loadConfigForPeers()
+	if err != nil {
+		return err
+	}
+
+	peer, err := cfg.getPeer(peerName)
+	if err != nil {
+		return err
+	}
+
+	data, err := readClipboard()
+	if err != nil {
+		return err
+	}
+
+	sshTarget := peer.SSH
+	remoteCmd := peer.RemoteCmd
+
+	cmd := exec.Command("ssh", sshTarget, remoteCmd, "copy")
+	cmd.Stdin = bytes.NewReader(data)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+
+	if err := cmd.Run(); err != nil {
+		return fmt.Errorf("failed to send to peer %q (%s): %w", peerName, sshTarget, err)
+	}
+
+	fmt.Printf("sent %s to peer %q (%s)\n", formatSize(int64(len(data))), peerName, sshTarget)
+	return nil
+}
+
+func cmdRecv(args []string) error {
+	if len(args) != 1 {
+		return fmt.Errorf("usage: pipeboard recv <peer>")
+	}
+	peerName := args[0]
+
+	cfg, err := loadConfigForPeers()
+	if err != nil {
+		return err
+	}
+
+	peer, err := cfg.getPeer(peerName)
+	if err != nil {
+		return err
+	}
+
+	sshTarget := peer.SSH
+	remoteCmd := peer.RemoteCmd
+
+	var out bytes.Buffer
+	cmd := exec.Command("ssh", sshTarget, remoteCmd, "paste")
+	cmd.Stdin = nil
+	cmd.Stdout = &out
+	cmd.Stderr = os.Stderr
+
+	if err := cmd.Run(); err != nil {
+		return fmt.Errorf("failed to receive from peer %q (%s): %w", peerName, sshTarget, err)
+	}
+
+	if err := writeClipboard(out.Bytes()); err != nil {
+		return err
+	}
+
+	fmt.Printf("received %s from peer %q (%s)\n", formatSize(int64(out.Len())), peerName, sshTarget)
+	return nil
+}
+
+func cmdPeek(args []string) error {
+	if len(args) != 1 {
+		return fmt.Errorf("usage: pipeboard peek <peer>")
+	}
+	peerName := args[0]
+
+	cfg, err := loadConfigForPeers()
+	if err != nil {
+		return err
+	}
+
+	peer, err := cfg.getPeer(peerName)
+	if err != nil {
+		return err
+	}
+
+	sshTarget := peer.SSH
+	remoteCmd := peer.RemoteCmd
+
+	cmd := exec.Command("ssh", sshTarget, remoteCmd, "paste")
+	cmd.Stdin = nil
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+
+	if err := cmd.Run(); err != nil {
+		return fmt.Errorf("failed to peek from peer %q (%s): %w", peerName, sshTarget, err)
+	}
+
 	return nil
 }
