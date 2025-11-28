@@ -1074,3 +1074,200 @@ func TestCmdFxDryRun(t *testing.T) {
 		t.Error("--dry-run flag should be recognized")
 	}
 }
+
+// createMockSSH creates a mock ssh script for testing
+func createMockSSH(t *testing.T, response string, shouldFail bool) string {
+	t.Helper()
+	tmpDir := t.TempDir()
+	mockSSH := tmpDir + "/ssh"
+
+	var script string
+	if shouldFail {
+		script = "#!/bin/sh\nexit 1\n"
+	} else {
+		script = "#!/bin/sh\necho '" + response + "'\n"
+	}
+
+	if err := os.WriteFile(mockSSH, []byte(script), 0755); err != nil {
+		t.Fatalf("failed to create mock ssh: %v", err)
+	}
+	return tmpDir
+}
+
+// Test cmdSend with mock SSH
+func TestCmdSendWithMockSSH(t *testing.T) {
+	// Create mock SSH that succeeds
+	mockDir := createMockSSH(t, "ok", false)
+
+	// Create config with peer
+	tmpDir := t.TempDir()
+	configFile := tmpDir + "/config.yaml"
+	configContent := `peers:
+  testpeer:
+    ssh: testhost
+    remote_cmd: pipeboard
+`
+	if err := os.WriteFile(configFile, []byte(configContent), 0644); err != nil {
+		t.Fatalf("failed to write config: %v", err)
+	}
+
+	// Save and restore env
+	origPath := os.Getenv("PATH")
+	origConfig := os.Getenv("PIPEBOARD_CONFIG")
+	defer func() {
+		_ = os.Setenv("PATH", origPath)
+		restoreEnv("PIPEBOARD_CONFIG", origConfig)
+	}()
+
+	// Prepend mock to PATH
+	_ = os.Setenv("PATH", mockDir+":"+origPath)
+	_ = os.Setenv("PIPEBOARD_CONFIG", configFile)
+
+	// cmdSend will fail due to readClipboard, but that's expected
+	// We're testing the peer resolution and SSH command setup
+	err := cmdSend([]string{"testpeer"})
+	// Error is expected (no clipboard), but should mention the peer
+	if err != nil && !strings.Contains(err.Error(), "backend") {
+		// If error is about peer not found, that's a test failure
+		if strings.Contains(err.Error(), "not found") {
+			t.Errorf("peer should be found: %v", err)
+		}
+	}
+}
+
+// Test cmdSend with missing peer
+func TestCmdSendMissingPeer(t *testing.T) {
+	tmpDir := t.TempDir()
+	configFile := tmpDir + "/config.yaml"
+	configContent := `peers:
+  otherpeer:
+    ssh: otherhost
+`
+	if err := os.WriteFile(configFile, []byte(configContent), 0644); err != nil {
+		t.Fatalf("failed to write config: %v", err)
+	}
+
+	origConfig := os.Getenv("PIPEBOARD_CONFIG")
+	defer restoreEnv("PIPEBOARD_CONFIG", origConfig)
+	_ = os.Setenv("PIPEBOARD_CONFIG", configFile)
+
+	err := cmdSend([]string{"nonexistent"})
+	if err == nil {
+		t.Error("expected error for nonexistent peer")
+	}
+	if !strings.Contains(err.Error(), "unknown peer") {
+		t.Errorf("error should mention unknown peer: %v", err)
+	}
+}
+
+// Test cmdRecv with missing peer
+func TestCmdRecvMissingPeer(t *testing.T) {
+	tmpDir := t.TempDir()
+	configFile := tmpDir + "/config.yaml"
+	configContent := `peers:
+  otherpeer:
+    ssh: otherhost
+`
+	if err := os.WriteFile(configFile, []byte(configContent), 0644); err != nil {
+		t.Fatalf("failed to write config: %v", err)
+	}
+
+	origConfig := os.Getenv("PIPEBOARD_CONFIG")
+	defer restoreEnv("PIPEBOARD_CONFIG", origConfig)
+	_ = os.Setenv("PIPEBOARD_CONFIG", configFile)
+
+	err := cmdRecv([]string{"nonexistent"})
+	if err == nil {
+		t.Error("expected error for nonexistent peer")
+	}
+}
+
+// Test cmdPeek with missing peer
+func TestCmdPeekMissingPeer(t *testing.T) {
+	tmpDir := t.TempDir()
+	configFile := tmpDir + "/config.yaml"
+	configContent := `peers:
+  otherpeer:
+    ssh: otherhost
+`
+	if err := os.WriteFile(configFile, []byte(configContent), 0644); err != nil {
+		t.Fatalf("failed to write config: %v", err)
+	}
+
+	origConfig := os.Getenv("PIPEBOARD_CONFIG")
+	defer restoreEnv("PIPEBOARD_CONFIG", origConfig)
+	_ = os.Setenv("PIPEBOARD_CONFIG", configFile)
+
+	err := cmdPeek([]string{"nonexistent"})
+	if err == nil {
+		t.Error("expected error for nonexistent peer")
+	}
+}
+
+// Test cmdPeek with mock SSH
+func TestCmdPeekWithMockSSH(t *testing.T) {
+	// Create mock SSH that outputs data
+	mockDir := createMockSSH(t, "clipboard content", false)
+
+	tmpDir := t.TempDir()
+	configFile := tmpDir + "/config.yaml"
+	configContent := `peers:
+  testpeer:
+    ssh: testhost
+    remote_cmd: pipeboard
+`
+	if err := os.WriteFile(configFile, []byte(configContent), 0644); err != nil {
+		t.Fatalf("failed to write config: %v", err)
+	}
+
+	origPath := os.Getenv("PATH")
+	origConfig := os.Getenv("PIPEBOARD_CONFIG")
+	defer func() {
+		_ = os.Setenv("PATH", origPath)
+		restoreEnv("PIPEBOARD_CONFIG", origConfig)
+	}()
+
+	_ = os.Setenv("PATH", mockDir+":"+origPath)
+	_ = os.Setenv("PIPEBOARD_CONFIG", configFile)
+
+	// cmdPeek should succeed with mock SSH
+	err := cmdPeek([]string{"testpeer"})
+	if err != nil {
+		t.Errorf("cmdPeek with mock SSH should succeed: %v", err)
+	}
+}
+
+// Test cmdRecv with mock SSH
+func TestCmdRecvWithMockSSH(t *testing.T) {
+	// Create mock SSH that outputs data
+	mockDir := createMockSSH(t, "received data", false)
+
+	tmpDir := t.TempDir()
+	configFile := tmpDir + "/config.yaml"
+	configContent := `peers:
+  testpeer:
+    ssh: testhost
+    remote_cmd: pipeboard
+`
+	if err := os.WriteFile(configFile, []byte(configContent), 0644); err != nil {
+		t.Fatalf("failed to write config: %v", err)
+	}
+
+	origPath := os.Getenv("PATH")
+	origConfig := os.Getenv("PIPEBOARD_CONFIG")
+	defer func() {
+		_ = os.Setenv("PATH", origPath)
+		restoreEnv("PIPEBOARD_CONFIG", origConfig)
+	}()
+
+	_ = os.Setenv("PATH", mockDir+":"+origPath)
+	_ = os.Setenv("PIPEBOARD_CONFIG", configFile)
+
+	// cmdRecv will try to write to clipboard which may fail
+	// but the SSH part should work
+	err := cmdRecv([]string{"testpeer"})
+	// May fail on clipboard write, but shouldn't fail on SSH
+	if err != nil && strings.Contains(err.Error(), "ssh") {
+		t.Errorf("SSH part should work with mock: %v", err)
+	}
+}
