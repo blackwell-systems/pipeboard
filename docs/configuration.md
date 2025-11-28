@@ -130,17 +130,24 @@ Remote storage configuration.
 
 ```yaml
 sync:
-  backend: s3              # only s3 supported currently
+  backend: s3              # "s3" or "local"
   encryption: aes256       # optional: client-side encryption
   passphrase: <string>     # encryption passphrase (use env var)
   ttl_days: <number>       # optional: auto-expire after N days
   s3:
-    bucket: <bucket-name>  # required
-    region: <aws-region>   # required
+    bucket: <bucket-name>  # required for s3
+    region: <aws-region>   # required for s3
     prefix: <key-prefix>   # optional: prefix for S3 keys
     sse: <AES256|aws:kms>  # optional: server-side encryption
     profile: <profile>     # optional: AWS profile name
+  local:
+    path: <directory>      # optional: defaults to ~/.config/pipeboard/slots
 ```
+
+**Backends:**
+
+- `s3` — Store slots in AWS S3 (requires bucket, region)
+- `local` — Store slots on local filesystem (zero config needed)
 
 ## Environment Variables
 
@@ -226,6 +233,14 @@ defaults:
 peers:
   dev:
     ssh: devbox
+```
+
+### Just local slots
+
+```yaml
+version: 1
+sync:
+  backend: local
 ```
 
 ### Just S3 slots

@@ -32,11 +32,12 @@ type FxConfig struct {
 }
 
 type SyncConfig struct {
-	Backend    string    `yaml:"backend"`              // "none" or "s3"
-	S3         *S3Config `yaml:"s3,omitempty"`
-	Encryption string    `yaml:"encryption,omitempty"` // "none" or "aes256"
-	Passphrase string    `yaml:"passphrase,omitempty"` // for client-side encryption
-	TTLDays    int       `yaml:"ttl_days,omitempty"`   // auto-expire slots after N days (0 = never)
+	Backend    string       `yaml:"backend"`              // "none", "s3", or "local"
+	S3         *S3Config    `yaml:"s3,omitempty"`
+	Local      *LocalConfig `yaml:"local,omitempty"`
+	Encryption string       `yaml:"encryption,omitempty"` // "none" or "aes256"
+	Passphrase string       `yaml:"passphrase,omitempty"` // for client-side encryption
+	TTLDays    int          `yaml:"ttl_days,omitempty"`   // auto-expire slots after N days (0 = never)
 }
 
 type S3Config struct {
@@ -227,6 +228,11 @@ func validateSyncConfig(cfg *Config) error {
 		}
 		if cfg.Sync.S3.Region == "" {
 			return fmt.Errorf("s3.region is required")
+		}
+	case "local":
+		// Local backend requires no mandatory config (uses defaults)
+		if cfg.Sync.Local == nil {
+			cfg.Sync.Local = &LocalConfig{}
 		}
 	default:
 		return fmt.Errorf("unsupported backend: %s", cfg.Sync.Backend)
