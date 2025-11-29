@@ -275,8 +275,8 @@ func mockStdin(t *testing.T, input string) func() {
 	}
 	os.Stdin = r
 	go func() {
-		defer w.Close()
-		w.WriteString(input)
+		defer func() { _ = w.Close() }()
+		_, _ = w.WriteString(input)
 	}()
 	return func() {
 		os.Stdin = oldStdin
