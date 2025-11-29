@@ -67,11 +67,27 @@ func (b *LocalBackend) Push(slot string, data []byte, meta map[string]string) er
 		hostname, _ = os.Hostname()
 	}
 
-	// Apply client-side encryption if configured
+	// Detect MIME type before any transformations
+	mimeType := detectMIME(data)
+
+	// Store original data for processing
 	storeData := data
+	compressed := false
 	encrypted := false
+
+	// Apply gzip compression for data > 1KB (saves storage)
+	if len(data) > 1024 {
+		compressedData, err := compressData(data)
+		if err == nil && len(compressedData) < len(data) {
+			// Only use compression if it actually reduces size
+			storeData = compressedData
+			compressed = true
+		}
+	}
+
+	// Apply client-side encryption if configured (after compression)
 	if b.encryption == "aes256" && b.passphrase != "" {
-		encData, err := encrypt(data, b.passphrase)
+		encData, err := encrypt(storeData, b.passphrase)
 		if err != nil {
 			return fmt.Errorf("encrypting data: %w", err)
 		}
@@ -80,14 +96,15 @@ func (b *LocalBackend) Push(slot string, data []byte, meta map[string]string) er
 	}
 
 	payload := SlotPayload{
-		Version:   1,
-		CreatedAt: time.Now().UTC().Format(time.RFC3339),
-		Hostname:  hostname,
-		OS:        runtime.GOOS,
-		Len:       len(data),
-		MIME:      "text/plain; charset=utf-8",
-		Encrypted: encrypted,
-		DataB64:   base64.StdEncoding.EncodeToString(storeData),
+		Version:    1,
+		CreatedAt:  time.Now().UTC().Format(time.RFC3339),
+		Hostname:   hostname,
+		OS:         runtime.GOOS,
+		Len:        len(data), // Original length before compression/encryption
+		MIME:       mimeType,
+		Encrypted:  encrypted,
+		Compressed: compressed,
+		DataB64:    base64.StdEncoding.EncodeToString(storeData),
 	}
 
 	// Set expiry time if TTL configured
@@ -136,7 +153,7 @@ func (b *LocalBackend) Pull(slot string) ([]byte, map[string]string, error) {
 		return nil, nil, fmt.Errorf("decoding base64 data: %w", err)
 	}
 
-	// Decrypt if the payload was encrypted
+	// Decrypt if the payload was encrypted (before decompression)
 	if payload.Encrypted {
 		if b.passphrase == "" {
 			return nil, nil, fmt.Errorf("slot is encrypted but no passphrase configured")
@@ -146,6 +163,15 @@ func (b *LocalBackend) Pull(slot string) ([]byte, map[string]string, error) {
 			return nil, nil, fmt.Errorf("decrypting data: %w", err)
 		}
 		data = decData
+	}
+
+	// Decompress if the payload was compressed (after decryption)
+	if payload.Compressed {
+		decompressedData, err := decompressData(data)
+		if err != nil {
+			return nil, nil, fmt.Errorf("decompressing data: %w", err)
+		}
+		data = decompressedData
 	}
 
 	meta := map[string]string{

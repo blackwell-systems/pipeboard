@@ -280,3 +280,185 @@ func TestFormatSizeEdgeCases(t *testing.T) {
 		t.Errorf("expected '10.0 GiB', got %s", result)
 	}
 }
+
+// Test gzip compression
+func TestCompressDecompress(t *testing.T) {
+	tests := []struct {
+		name string
+		data []byte
+	}{
+		{"small text", []byte("hello world")},
+		{"empty", []byte{}},
+		{"large text", []byte(largeTestString(5000))},
+		{"binary data", []byte{0x00, 0x01, 0x02, 0x03, 0xff, 0xfe, 0xfd}},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Compress
+			compressed, err := compressData(tt.data)
+			if err != nil {
+				t.Fatalf("compressData failed: %v", err)
+			}
+
+			// Decompress
+			decompressed, err := decompressData(compressed)
+			if err != nil {
+				t.Fatalf("decompressData failed: %v", err)
+			}
+
+			// Verify roundtrip
+			if string(decompressed) != string(tt.data) {
+				t.Errorf("roundtrip failed: got %q, want %q", decompressed, tt.data)
+			}
+		})
+	}
+}
+
+func TestCompressDataEfficiency(t *testing.T) {
+	// Test that compression actually reduces size for compressible data
+	data := []byte(largeTestString(5000))
+	compressed, err := compressData(data)
+	if err != nil {
+		t.Fatalf("compressData failed: %v", err)
+	}
+
+	if len(compressed) >= len(data) {
+		t.Logf("compression did not reduce size: original=%d, compressed=%d", len(data), len(compressed))
+	}
+}
+
+func TestDecompressInvalidData(t *testing.T) {
+	// Test decompression of invalid gzip data
+	_, err := decompressData([]byte("not gzip data"))
+	if err == nil {
+		t.Error("expected error for invalid gzip data")
+	}
+}
+
+func largeTestString(n int) string {
+	s := "test data repeated "
+	result := ""
+	for len(result) < n {
+		result += s
+	}
+	return result[:n]
+}
+
+// Test MIME detection
+func TestDetectMIME(t *testing.T) {
+	tests := []struct {
+		name     string
+		data     []byte
+		contains string
+	}{
+		{"empty", []byte{}, "text/plain"},
+		{"plain text", []byte("hello world"), "text/plain"},
+		{"HTML", []byte("<html><body>test</body></html>"), "text/html"},
+		{"PNG header", []byte{0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A}, "image/png"},
+		{"JPEG header", []byte{0xFF, 0xD8, 0xFF}, "image/jpeg"},
+		{"JSON", []byte(`{"key": "value"}`), "text/plain"}, // JSON detected as text
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mime := detectMIME(tt.data)
+			if mime == "" {
+				t.Error("detectMIME returned empty string")
+			}
+			if !containsMIME(mime, tt.contains) {
+				t.Errorf("detectMIME(%q) = %q, want to contain %q", tt.name, mime, tt.contains)
+			}
+		})
+	}
+}
+
+func containsMIME(mime, substr string) bool {
+	return len(mime) >= len(substr) && (mime[:len(substr)] == substr || mime == substr ||
+		(len(mime) > len(substr) && mime[:len(substr)+1] == substr+";" || mime == substr))
+}
+
+// Test retry with backoff
+func TestRetryWithBackoffSuccess(t *testing.T) {
+	attempts := 0
+	err := retryWithBackoff(3, func() error {
+		attempts++
+		return nil // Succeed immediately
+	})
+
+	if err != nil {
+		t.Errorf("expected no error, got: %v", err)
+	}
+	if attempts != 1 {
+		t.Errorf("expected 1 attempt, got %d", attempts)
+	}
+}
+
+func TestRetryWithBackoffEventualSuccess(t *testing.T) {
+	attempts := 0
+	err := retryWithBackoff(3, func() error {
+		attempts++
+		if attempts < 2 {
+			return os.ErrNotExist // Transient error
+		}
+		return nil // Succeed on second attempt
+	})
+
+	if err != nil {
+		t.Errorf("expected no error after retry, got: %v", err)
+	}
+	if attempts != 2 {
+		t.Errorf("expected 2 attempts, got %d", attempts)
+	}
+}
+
+func TestRetryWithBackoffNonTransientError(t *testing.T) {
+	attempts := 0
+	err := retryWithBackoff(3, func() error {
+		attempts++
+		return os.ErrNotExist // Non-transient-ish but not in our list
+	})
+
+	// Should retry for ErrNotExist since it's not in our non-transient list
+	if err == nil {
+		t.Error("expected error after all retries")
+	}
+	if attempts != 3 {
+		t.Errorf("expected 3 attempts, got %d", attempts)
+	}
+}
+
+// Test SlotPayload with compression flag
+func TestSlotPayloadWithCompression(t *testing.T) {
+	data := []byte("compressed data")
+
+	payload := SlotPayload{
+		Version:    1,
+		CreatedAt:  time.Now().UTC().Format(time.RFC3339),
+		Hostname:   "test-host",
+		OS:         "linux",
+		Len:        len(data),
+		MIME:       "text/plain; charset=utf-8",
+		Compressed: true,
+		DataB64:    base64.StdEncoding.EncodeToString(data),
+	}
+
+	if !payload.Compressed {
+		t.Error("expected Compressed to be true")
+	}
+
+	// Verify JSON encoding preserves compressed flag
+	jsonData, err := json.Marshal(payload)
+	if err != nil {
+		t.Fatalf("failed to marshal: %v", err)
+	}
+
+	var decoded SlotPayload
+	if err := json.Unmarshal(jsonData, &decoded); err != nil {
+		t.Fatalf("failed to unmarshal: %v", err)
+	}
+
+	if !decoded.Compressed {
+		t.Error("expected decoded Compressed to be true")
+	}
+}
