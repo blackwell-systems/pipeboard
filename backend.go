@@ -5,6 +5,7 @@ import (
 	"os"
 	"os/exec"
 	"runtime"
+	"strings"
 )
 
 type BackendKind string
@@ -244,4 +245,26 @@ func detectWindows() (*Backend, error) {
 func hasCmd(name string) bool {
 	_, err := exec.LookPath(name)
 	return err == nil
+}
+
+// installHint returns a helpful installation hint for the given backend
+func installHint(kind BackendKind) string {
+	switch kind {
+	case BackendWayland:
+		return "Install wl-clipboard: sudo apt install wl-clipboard (Debian/Ubuntu) or sudo dnf install wl-clipboard (Fedora)"
+	case BackendX11:
+		return "Install xclip: sudo apt install xclip (Debian/Ubuntu) or sudo dnf install xclip (Fedora)"
+	case BackendDarwin:
+		return "pbcopy/pbpaste should be available by default on macOS"
+	case BackendWSL, BackendWindows:
+		return "Ensure clip.exe and powershell.exe are in your PATH"
+	default:
+		return "Run 'pipeboard doctor' for more information"
+	}
+}
+
+// missingToolsError returns a formatted error with installation hints
+func missingToolsError(b *Backend) error {
+	return fmt.Errorf("backend %s is missing required tools: %s\n       Hint: %s",
+		b.Kind, strings.Join(b.Missing, ", "), installHint(b.Kind))
 }
