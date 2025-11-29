@@ -73,7 +73,7 @@ brews:
     homepage: "https://github.com/blackwell-systems/pipeboard"
     description: "Tiny cross-platform clipboard CLI with SSH + S3 sync"
     license: "MIT"
-    skip_upload: true  # Disabled until HOMEBREW_TAP_TOKEN is fixed (401 error)
+    skip_upload: auto
     test: |
       system "#{bin}/pipeboard", "version"
     install: |
