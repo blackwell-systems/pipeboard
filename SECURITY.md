@@ -12,7 +12,8 @@ pipeboard is a clipboard utility that handles potentially sensitive data. This d
   - Operation history stored in `~/.config/pipeboard/history.json` (command metadata only, no content)
   - Clipboard content history stored in `~/.config/pipeboard/clipboard_history.json` (up to 20 entries with full content)
   - History files are stored with `0600` permissions
-  - **Security note**: If your clipboard contains sensitive data, the history files will also contain that data. Consider disabling history or periodically clearing `~/.config/pipeboard/`
+  - **Encrypted history**: When encryption is enabled in your sync config (`encryption: aes256`), clipboard history content and previews are automatically encrypted using the same passphrase
+  - **Security note**: If your clipboard contains sensitive data and encryption is not enabled, the history files will contain that data in plaintext. Enable encryption or periodically clear `~/.config/pipeboard/`
 
 ## Transport Security
 

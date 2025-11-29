@@ -235,6 +235,9 @@ Track and restore previous clipboard contents:
 # Show clipboard content history
 pipeboard history --local
 
+# Search history for specific content
+pipeboard history --local --search "api key"
+
 # Restore most recent entry
 pipeboard recall 1
 
@@ -242,7 +245,7 @@ pipeboard recall 1
 pipeboard recall 3
 ```
 
-The local clipboard history stores up to 20 entries with automatic deduplication.
+The local clipboard history stores up to 20 entries with automatic deduplication. When encryption is enabled in your sync config, clipboard history is also encrypted at rest.
 
 **Tip:** Add an alias for convenience:
 
@@ -341,6 +344,7 @@ PIPEBOARD_S3_SSE           # server-side encryption
 | `history --slots` | Filter to push/pull/show/rm |
 | `history --peer` | Filter to send/recv/peek/watch |
 | `history --local` | Show clipboard content history |
+| `history --local --search <query>` | Search clipboard history |
 | `recall <index>` | Restore from clipboard history |
 
 **Setup:**

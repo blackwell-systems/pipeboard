@@ -235,6 +235,10 @@ pipeboard history --peer
 # Show local clipboard history (content snapshots)
 pipeboard history --local
 
+# Search clipboard history for text
+pipeboard history --local --search "password"
+pipeboard history --local -s "kubectl"
+
 # JSON output
 pipeboard history --json
 ```
@@ -244,6 +248,7 @@ pipeboard history --json
 - `--slots` — Show only slot operations (push/pull/show/rm)
 - `--peer` — Show only peer operations (send/recv/peek)
 - `--local` — Show local clipboard history (content snapshots)
+- `--search`, `-s` — Filter clipboard history by search query (requires `--local`)
 - `--json` — Output in JSON format
 
 ### recall
