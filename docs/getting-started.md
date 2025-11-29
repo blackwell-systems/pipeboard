@@ -180,6 +180,21 @@ pipeboard backend
 # windows-clip (on Windows)
 ```
 
+### Clipboard History
+
+Track and restore previous clipboard contents:
+
+```bash
+# Show clipboard content history
+pipeboard history --local
+
+# Restore most recent entry
+pipeboard recall 1
+
+# Restore third most recent
+pipeboard recall 3
+```
+
 ## Create a Config File
 
 For advanced features (transforms, sync, peers), create a config file:
