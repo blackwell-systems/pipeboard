@@ -10,9 +10,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - **Docsify documentation site** - Dark-themed docs with cover page, matching Blackwell Systems style
 - **Codecov integration** - Code coverage tracking in CI
+- **Local filesystem backend** - Zero-config slot storage at `~/.config/pipeboard/slots/`
+- **Per-command help** - `pipeboard <command> --help` shows detailed help for each command
+- **Colored error messages** - Errors now display in red (respects NO_COLOR and TERM=dumb)
+- **CONTRIBUTING.md** - Contributor guidelines for open source participation
 
 ### Changed
-- Test coverage improved from 43% to 64%
+- Test coverage improved from 43% to 66%
+- Help text now documents local backend alongside S3
 
 ## [0.5.0] - 2025-11-28
 
