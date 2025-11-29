@@ -30,7 +30,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **CONTRIBUTING.md** - Contributor guidelines for open source participation
 
 ### Changed
-- Test coverage improved from 43% to 71%
+- Test coverage improved to 60.8% (added comprehensive tests for history, recall, and encryption functions)
 - Help text now documents local backend alongside S3
 
 ### Fixed
