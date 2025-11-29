@@ -117,19 +117,17 @@ pipeboard paste --image > clipboard.png
 
 ## Backend Detection
 
-pipeboard detects your backend automatically:
+pipeboard detects your clipboard backend automatically based on platform and environment:
 
 1. **macOS:** Always uses `darwin-pasteboard`
 2. **Windows:** Uses `windows-clip`
-3. **WSL:** Detected via `/proc/version`, uses `wsl-clip`
+3. **WSL:** Detected via `clip.exe` in PATH, uses `wsl-clip`
 4. **Wayland:** Detected via `WAYLAND_DISPLAY` env var
 5. **X11:** Detected via `DISPLAY` env var
 
-Force a specific backend (not recommended):
+The clipboard backend is auto-detected and cannot be overridden. Use `pipeboard doctor` to see your detected backend.
 
-```bash
-PIPEBOARD_BACKEND=x11-xclip pipeboard copy
-```
+> **Note:** `PIPEBOARD_BACKEND` is an environment variable for the *sync* backend (s3/local), not the clipboard backend.
 
 ## Troubleshooting
 

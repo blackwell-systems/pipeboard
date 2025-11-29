@@ -614,3 +614,167 @@ func TestLocalBackendMkdirError(t *testing.T) {
 		t.Errorf("error should mention creating directory: %v", err)
 	}
 }
+
+// Test Push with compression for large data
+func TestLocalBackendPushWithCompression(t *testing.T) {
+	tmpDir := t.TempDir()
+	cfg := &LocalConfig{Path: tmpDir}
+
+	backend, err := newLocalBackend(cfg, "", "", 0)
+	if err != nil {
+		t.Fatalf("failed to create local backend: %v", err)
+	}
+
+	// Create data > 1KB to trigger compression
+	largeData := make([]byte, 2000)
+	for i := range largeData {
+		largeData[i] = byte('a' + (i % 26))
+	}
+
+	if err := backend.Push("compressed", largeData, nil); err != nil {
+		t.Fatalf("Push failed: %v", err)
+	}
+
+	// Pull and verify data is correctly decompressed
+	pulled, meta, err := backend.Pull("compressed")
+	if err != nil {
+		t.Fatalf("Pull failed: %v", err)
+	}
+
+	if len(pulled) != len(largeData) {
+		t.Errorf("data length mismatch: got %d, want %d", len(pulled), len(largeData))
+	}
+
+	if string(pulled) != string(largeData) {
+		t.Error("pulled data does not match original")
+	}
+
+	// Verify MIME type was detected
+	if meta["mime"] == "" {
+		t.Error("MIME type should be set")
+	}
+}
+
+// Test Push with small data (no compression)
+func TestLocalBackendPushNoCompression(t *testing.T) {
+	tmpDir := t.TempDir()
+	cfg := &LocalConfig{Path: tmpDir}
+
+	backend, err := newLocalBackend(cfg, "", "", 0)
+	if err != nil {
+		t.Fatalf("failed to create local backend: %v", err)
+	}
+
+	// Small data (< 1KB) should not be compressed
+	smallData := []byte("small data")
+
+	if err := backend.Push("small", smallData, nil); err != nil {
+		t.Fatalf("Push failed: %v", err)
+	}
+
+	// Pull and verify
+	pulled, _, err := backend.Pull("small")
+	if err != nil {
+		t.Fatalf("Pull failed: %v", err)
+	}
+
+	if string(pulled) != string(smallData) {
+		t.Errorf("data mismatch: got %q, want %q", pulled, smallData)
+	}
+}
+
+// Test Push/Pull with compression and encryption
+func TestLocalBackendCompressionAndEncryption(t *testing.T) {
+	tmpDir := t.TempDir()
+	cfg := &LocalConfig{Path: tmpDir}
+
+	backend, err := newLocalBackend(cfg, "aes256", "test-passphrase", 0)
+	if err != nil {
+		t.Fatalf("failed to create local backend: %v", err)
+	}
+
+	// Create data > 1KB
+	largeData := make([]byte, 3000)
+	for i := range largeData {
+		largeData[i] = byte('x')
+	}
+
+	if err := backend.Push("compressed-encrypted", largeData, nil); err != nil {
+		t.Fatalf("Push failed: %v", err)
+	}
+
+	// Pull and verify
+	pulled, _, err := backend.Pull("compressed-encrypted")
+	if err != nil {
+		t.Fatalf("Pull failed: %v", err)
+	}
+
+	if string(pulled) != string(largeData) {
+		t.Error("data mismatch after compression+encryption roundtrip")
+	}
+}
+
+// Test Pull of compressed slot without compression flag (legacy data)
+func TestLocalBackendPullLegacyUncompressed(t *testing.T) {
+	tmpDir := t.TempDir()
+	cfg := &LocalConfig{Path: tmpDir}
+
+	backend, err := newLocalBackend(cfg, "", "", 0)
+	if err != nil {
+		t.Fatalf("failed to create local backend: %v", err)
+	}
+
+	// Write a slot without compression flag (legacy format)
+	payload := `{"version":1,"created_at":"2025-01-01T00:00:00Z","hostname":"test","os":"linux","len":11,"mime":"text/plain","data_b64":"aGVsbG8gd29ybGQ="}`
+	slotFile := filepath.Join(tmpDir, "legacy.pb")
+	if err := os.WriteFile(slotFile, []byte(payload), 0600); err != nil {
+		t.Fatalf("failed to write file: %v", err)
+	}
+
+	pulled, _, err := backend.Pull("legacy")
+	if err != nil {
+		t.Fatalf("Pull failed: %v", err)
+	}
+
+	if string(pulled) != "hello world" {
+		t.Errorf("expected 'hello world', got %q", pulled)
+	}
+}
+
+// Test MIME type detection for different content types
+func TestLocalBackendMIMEDetection(t *testing.T) {
+	tmpDir := t.TempDir()
+	cfg := &LocalConfig{Path: tmpDir}
+
+	backend, err := newLocalBackend(cfg, "", "", 0)
+	if err != nil {
+		t.Fatalf("failed to create local backend: %v", err)
+	}
+
+	tests := []struct {
+		name         string
+		data         []byte
+		expectedMIME string
+	}{
+		{"plain text", []byte("hello world"), "text/plain"},
+		{"HTML", []byte("<html><body>test</body></html>"), "text/html"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			slotName := "mime-" + tt.name
+			if err := backend.Push(slotName, tt.data, nil); err != nil {
+				t.Fatalf("Push failed: %v", err)
+			}
+
+			_, meta, err := backend.Pull(slotName)
+			if err != nil {
+				t.Fatalf("Pull failed: %v", err)
+			}
+
+			if !strings.HasPrefix(meta["mime"], tt.expectedMIME) {
+				t.Errorf("expected MIME to start with %q, got %q", tt.expectedMIME, meta["mime"])
+			}
+		})
+	}
+}

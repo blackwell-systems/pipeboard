@@ -142,7 +142,7 @@ sync:
     region: us-west-2
 ```
 
-> **Note:** TTL uses S3 lifecycle rules. You may need to configure the bucket lifecycle policy.
+> **Note:** TTL is implemented client-side. When pulling a slot, pipeboard checks the expiry timestamp and auto-deletes expired slots. Slots are not automatically deleted from S3 by lifecycle rules—expiry only occurs when accessed.
 
 ### Server-Side Encryption
 
@@ -181,6 +181,25 @@ Or via environment:
 ```bash
 export PIPEBOARD_S3_PROFILE=my-aws-profile
 ```
+
+### Advanced Features
+
+Both S3 and local backends include these optimizations:
+
+**Automatic Compression**
+- Data larger than 1KB is automatically compressed with gzip
+- Compression only applied if it reduces size (incompressible data stored as-is)
+- Transparent to users—decompression happens automatically on pull
+
+**MIME Type Detection**
+- Content type automatically detected (text, HTML, JSON, PNG, JPEG, etc.)
+- Stored in slot metadata and available in `--json` output
+- Uses Go's `http.DetectContentType` for accurate detection
+
+**Retry with Exponential Backoff**
+- S3 operations automatically retry on transient network errors
+- Uses exponential backoff with jitter to avoid thundering herd
+- Maximum 3 retries before failing
 
 ## Environment Variables
 
@@ -232,6 +251,8 @@ Slots are stored as JSON files:
 
 Local backend supports:
 - **Encryption** — Client-side AES-256 encryption
+- **Compression** — Automatic gzip compression for data > 1KB
+- **MIME detection** — Automatic content-type detection
 - **TTL** — Auto-expire slots after N days
 - **Custom path** — Store slots anywhere
 

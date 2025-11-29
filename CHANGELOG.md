@@ -8,6 +8,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **History search** - `pipeboard history --local --search <query>` to filter clipboard history by content
+- **Encrypted clipboard history** - When encryption is enabled, clipboard history is automatically encrypted at rest using the sync passphrase
+- **Automatic compression** - Data larger than 1KB is automatically gzip-compressed when stored in slots (both S3 and local)
+- **MIME type detection** - Content type is automatically detected and stored in slot metadata
+- **Retry with exponential backoff** - S3 operations automatically retry on transient network errors with jitter
 - **Watch mode** - `pipeboard watch [peer]` for real-time bidirectional clipboard sync with a peer
 - **Local clipboard history** - `pipeboard history --local` shows clipboard content snapshots
 - **Recall command** - `pipeboard recall <index>` restores previous clipboard entries
@@ -27,6 +32,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - Test coverage improved from 43% to 71%
 - Help text now documents local backend alongside S3
+
+### Fixed
+- Watch mode echo prevention logic now correctly preserves the prevention window
+- TTL parsing now validates input and uses defaults for invalid values
+- Backend detection is now cached for performance (avoids repeated detection calls)
+- S3 slot listing now uses pagination to handle more than 1000 slots
 
 ## [0.5.1] - 2025-11-29
 

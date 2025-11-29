@@ -2,11 +2,14 @@ package main
 
 import (
 	"bytes"
+	"compress/gzip"
 	"context"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io"
+	"math/rand"
+	"net/http"
 	"os"
 	"path"
 	"runtime"
@@ -22,15 +25,72 @@ import (
 
 // SlotPayload is the JSON envelope stored in remote slots
 type SlotPayload struct {
-	Version   int    `json:"version"`
-	CreatedAt string `json:"created_at"`
-	ExpiresAt string `json:"expires_at,omitempty"` // RFC3339 timestamp for TTL
-	Hostname  string `json:"hostname"`
-	OS        string `json:"os"`
-	Len       int    `json:"len"`
-	MIME      string `json:"mime"`
-	Encrypted bool   `json:"encrypted,omitempty"` // true if data is client-side encrypted
-	DataB64   string `json:"data_b64"`
+	Version    int    `json:"version"`
+	CreatedAt  string `json:"created_at"`
+	ExpiresAt  string `json:"expires_at,omitempty"` // RFC3339 timestamp for TTL
+	Hostname   string `json:"hostname"`
+	OS         string `json:"os"`
+	Len        int    `json:"len"`
+	MIME       string `json:"mime"`
+	Encrypted  bool   `json:"encrypted,omitempty"`  // true if data is client-side encrypted
+	Compressed bool   `json:"compressed,omitempty"` // true if data is gzip compressed
+	DataB64    string `json:"data_b64"`
+}
+
+// compressData compresses data using gzip
+func compressData(data []byte) ([]byte, error) {
+	var buf bytes.Buffer
+	w := gzip.NewWriter(&buf)
+	if _, err := w.Write(data); err != nil {
+		return nil, err
+	}
+	if err := w.Close(); err != nil {
+		return nil, err
+	}
+	return buf.Bytes(), nil
+}
+
+// decompressData decompresses gzip data
+func decompressData(data []byte) ([]byte, error) {
+	r, err := gzip.NewReader(bytes.NewReader(data))
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = r.Close() }()
+	return io.ReadAll(r)
+}
+
+// detectMIME detects the MIME type of data
+func detectMIME(data []byte) string {
+	if len(data) == 0 {
+		return "text/plain; charset=utf-8"
+	}
+	// Use http.DetectContentType for accurate detection
+	mimeType := http.DetectContentType(data)
+	return mimeType
+}
+
+// retryWithBackoff retries an operation with exponential backoff
+func retryWithBackoff(maxRetries int, operation func() error) error {
+	var lastErr error
+	for attempt := 0; attempt < maxRetries; attempt++ {
+		if err := operation(); err != nil {
+			lastErr = err
+			// Don't retry on non-transient errors
+			if strings.Contains(err.Error(), "NoSuchKey") ||
+				strings.Contains(err.Error(), "AccessDenied") ||
+				strings.Contains(err.Error(), "InvalidAccessKeyId") {
+				return err
+			}
+			// Exponential backoff with jitter
+			backoff := time.Duration(1<<uint(attempt)) * time.Second
+			jitter := time.Duration(rand.Intn(1000)) * time.Millisecond
+			time.Sleep(backoff + jitter)
+			continue
+		}
+		return nil
+	}
+	return fmt.Errorf("operation failed after %d retries: %w", maxRetries, lastErr)
 }
 
 // RemoteSlot represents metadata about a stored slot
@@ -134,11 +194,27 @@ func (b *S3Backend) Push(slot string, data []byte, meta map[string]string) error
 		hostname, _ = os.Hostname()
 	}
 
-	// Apply client-side encryption if configured
+	// Detect MIME type before any transformations
+	mimeType := detectMIME(data)
+
+	// Store original data for processing
 	storeData := data
+	compressed := false
 	encrypted := false
+
+	// Apply gzip compression for data > 1KB (saves bandwidth/storage)
+	if len(data) > 1024 {
+		compressedData, err := compressData(data)
+		if err == nil && len(compressedData) < len(data) {
+			// Only use compression if it actually reduces size
+			storeData = compressedData
+			compressed = true
+		}
+	}
+
+	// Apply client-side encryption if configured (after compression)
 	if b.encryption == "aes256" && b.passphrase != "" {
-		encData, err := encrypt(data, b.passphrase)
+		encData, err := encrypt(storeData, b.passphrase)
 		if err != nil {
 			return fmt.Errorf("encrypting data: %w", err)
 		}
@@ -147,14 +223,15 @@ func (b *S3Backend) Push(slot string, data []byte, meta map[string]string) error
 	}
 
 	payload := SlotPayload{
-		Version:   1,
-		CreatedAt: time.Now().UTC().Format(time.RFC3339),
-		Hostname:  hostname,
-		OS:        runtime.GOOS,
-		Len:       len(data), // Original length before encryption
-		MIME:      "text/plain; charset=utf-8",
-		Encrypted: encrypted,
-		DataB64:   base64.StdEncoding.EncodeToString(storeData),
+		Version:    1,
+		CreatedAt:  time.Now().UTC().Format(time.RFC3339),
+		Hostname:   hostname,
+		OS:         runtime.GOOS,
+		Len:        len(data), // Original length before compression/encryption
+		MIME:       mimeType,
+		Encrypted:  encrypted,
+		Compressed: compressed,
+		DataB64:    base64.StdEncoding.EncodeToString(storeData),
 	}
 
 	// Set expiry time if TTL configured
@@ -182,30 +259,40 @@ func (b *S3Backend) Push(slot string, data []byte, meta map[string]string) error
 		input.ServerSideEncryption = types.ServerSideEncryptionAwsKms
 	}
 
-	ctx := context.Background()
-	_, err = b.client.PutObject(ctx, input)
-	if err != nil {
-		return fmt.Errorf("uploading to S3: %w", err)
-	}
-
-	return nil
+	// Use retry with exponential backoff for network resilience
+	return retryWithBackoff(3, func() error {
+		ctx := context.Background()
+		_, err := b.client.PutObject(ctx, input)
+		if err != nil {
+			return fmt.Errorf("uploading to S3: %w", err)
+		}
+		return nil
+	})
 }
 
 func (b *S3Backend) Pull(slot string) ([]byte, map[string]string, error) {
-	ctx := context.Background()
+	var jsonData []byte
 
-	result, err := b.client.GetObject(ctx, &s3.GetObjectInput{
-		Bucket: aws.String(b.bucket),
-		Key:    aws.String(b.key(slot)),
+	// Use retry with exponential backoff for network resilience
+	err := retryWithBackoff(3, func() error {
+		ctx := context.Background()
+		result, err := b.client.GetObject(ctx, &s3.GetObjectInput{
+			Bucket: aws.String(b.bucket),
+			Key:    aws.String(b.key(slot)),
+		})
+		if err != nil {
+			return fmt.Errorf("fetching from S3: %w", err)
+		}
+		defer func() { _ = result.Body.Close() }()
+
+		jsonData, err = io.ReadAll(result.Body)
+		if err != nil {
+			return fmt.Errorf("reading S3 object: %w", err)
+		}
+		return nil
 	})
 	if err != nil {
-		return nil, nil, fmt.Errorf("fetching from S3: %w", err)
-	}
-	defer func() { _ = result.Body.Close() }()
-
-	jsonData, err := io.ReadAll(result.Body)
-	if err != nil {
-		return nil, nil, fmt.Errorf("reading S3 object: %w", err)
+		return nil, nil, err
 	}
 
 	var payload SlotPayload
@@ -228,7 +315,7 @@ func (b *S3Backend) Pull(slot string) ([]byte, map[string]string, error) {
 		return nil, nil, fmt.Errorf("decoding base64 data: %w", err)
 	}
 
-	// Decrypt if the payload was encrypted
+	// Decrypt if the payload was encrypted (before decompression)
 	if payload.Encrypted {
 		if b.passphrase == "" {
 			return nil, nil, fmt.Errorf("slot is encrypted but no passphrase configured")
@@ -238,6 +325,15 @@ func (b *S3Backend) Pull(slot string) ([]byte, map[string]string, error) {
 			return nil, nil, fmt.Errorf("decrypting data: %w", err)
 		}
 		data = decData
+	}
+
+	// Decompress if the payload was compressed (after decryption)
+	if payload.Compressed {
+		decompressedData, err := decompressData(data)
+		if err != nil {
+			return nil, nil, fmt.Errorf("decompressing data: %w", err)
+		}
+		data = decompressedData
 	}
 
 	meta := map[string]string{
@@ -253,39 +349,42 @@ func (b *S3Backend) Pull(slot string) ([]byte, map[string]string, error) {
 func (b *S3Backend) List() ([]RemoteSlot, error) {
 	ctx := context.Background()
 
-	input := &s3.ListObjectsV2Input{
+	// Use paginator to handle more than 1000 objects
+	paginator := s3.NewListObjectsV2Paginator(b.client, &s3.ListObjectsV2Input{
 		Bucket: aws.String(b.bucket),
 		Prefix: aws.String(b.prefix),
-	}
-
-	result, err := b.client.ListObjectsV2(ctx, input)
-	if err != nil {
-		return nil, fmt.Errorf("listing S3 objects: %w", err)
-	}
+	})
 
 	var slots []RemoteSlot
-	for _, obj := range result.Contents {
-		key := aws.ToString(obj.Key)
-
-		// Skip if not a .pb file
-		if !strings.HasSuffix(key, ".pb") {
-			continue
+	for paginator.HasMorePages() {
+		page, err := paginator.NextPage(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("listing S3 objects: %w", err)
 		}
 
-		// Extract slot name
-		name := strings.TrimPrefix(key, b.prefix)
-		name = strings.TrimPrefix(name, "/")
-		name = strings.TrimSuffix(name, ".pb")
+		for _, obj := range page.Contents {
+			key := aws.ToString(obj.Key)
 
-		slot := RemoteSlot{
-			Name:      name,
-			Size:      aws.ToInt64(obj.Size),
-			CreatedAt: aws.ToTime(obj.LastModified),
+			// Skip if not a .pb file
+			if !strings.HasSuffix(key, ".pb") {
+				continue
+			}
+
+			// Extract slot name
+			name := strings.TrimPrefix(key, b.prefix)
+			name = strings.TrimPrefix(name, "/")
+			name = strings.TrimSuffix(name, ".pb")
+
+			slot := RemoteSlot{
+				Name:      name,
+				Size:      aws.ToInt64(obj.Size),
+				CreatedAt: aws.ToTime(obj.LastModified),
+			}
+
+			// Try to get hostname from object metadata (optional, may require HEAD request)
+			// For now, we'll get it when showing details
+			slots = append(slots, slot)
 		}
-
-		// Try to get hostname from object metadata (optional, may require HEAD request)
-		// For now, we'll get it when showing details
-		slots = append(slots, slot)
 	}
 
 	return slots, nil

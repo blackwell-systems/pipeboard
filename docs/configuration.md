@@ -192,16 +192,11 @@ AWS_REGION
 
 Default: `~/.config/pipeboard/config.yaml`
 
-Override with:
+Override with environment variable:
 
 ```bash
 export PIPEBOARD_CONFIG=/path/to/config.yaml
-```
-
-Or:
-
-```bash
-pipeboard --config /path/to/config.yaml <command>
+pipeboard <command>
 ```
 
 ## Minimal Configs
