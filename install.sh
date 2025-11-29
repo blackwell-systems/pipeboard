@@ -39,8 +39,9 @@ fi
 
 echo "Installing pipeboard ${LATEST} (${OS}/${ARCH})..."
 
-# Download URL
-FILENAME="pipeboard_${OS}_${ARCH}.tar.gz"
+# Download URL - GoReleaser uses format: pipeboard_VERSION_OS_ARCH.tar.gz
+VERSION="${LATEST#v}"  # strip 'v' prefix: v0.5.0 -> 0.5.0
+FILENAME="pipeboard_${VERSION}_${OS}_${ARCH}.tar.gz"
 URL="https://github.com/${REPO}/releases/download/${LATEST}/${FILENAME}"
 
 # Create temp directory
