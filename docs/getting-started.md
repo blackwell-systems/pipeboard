@@ -7,7 +7,7 @@
 #### **Homebrew (macOS/Linux)**
 
 ```bash
-brew install blackwell-systems/tap/pipeboard
+brew install blackwell-systems/homebrew-tap/pipeboard
 ```
 
 #### **Go**
