@@ -1908,3 +1908,321 @@ func TestHelpMentionsImplicitCopy(t *testing.T) {
 		t.Error("help examples should show implicit copy")
 	}
 }
+
+// Test installHint for all backend kinds
+func TestInstallHint(t *testing.T) {
+	tests := []struct {
+		kind     BackendKind
+		contains string
+	}{
+		{BackendWayland, "wl-clipboard"},
+		{BackendX11, "xclip"},
+		{BackendDarwin, "pbcopy"},
+		{BackendWSL, "clip.exe"},
+		{BackendWindows, "clip.exe"},
+		{BackendUnknown, "doctor"},
+	}
+
+	for _, tc := range tests {
+		hint := installHint(tc.kind)
+		if !strings.Contains(hint, tc.contains) {
+			t.Errorf("installHint(%s) should contain %q, got %q", tc.kind, tc.contains, hint)
+		}
+	}
+}
+
+// Test installHint returns non-empty for all backends
+func TestInstallHintNonEmpty(t *testing.T) {
+	kinds := []BackendKind{
+		BackendDarwin,
+		BackendWayland,
+		BackendX11,
+		BackendWSL,
+		BackendWindows,
+		BackendUnknown,
+	}
+
+	for _, kind := range kinds {
+		hint := installHint(kind)
+		if hint == "" {
+			t.Errorf("installHint(%s) should not be empty", kind)
+		}
+	}
+}
+
+// Test missingToolsError formatting
+func TestMissingToolsError(t *testing.T) {
+	b := &Backend{
+		Kind:    BackendWayland,
+		Missing: []string{"wl-copy", "wl-paste"},
+	}
+
+	err := missingToolsError(b)
+	if err == nil {
+		t.Fatal("missingToolsError should return an error")
+	}
+
+	errStr := err.Error()
+
+	// Should contain the backend kind
+	if !strings.Contains(errStr, "wayland") {
+		t.Error("error should mention backend kind")
+	}
+
+	// Should contain the missing tools
+	if !strings.Contains(errStr, "wl-copy") {
+		t.Error("error should list missing tools")
+	}
+
+	// Should contain a hint
+	if !strings.Contains(errStr, "Hint:") {
+		t.Error("error should contain a Hint")
+	}
+
+	// Should contain installation instructions
+	if !strings.Contains(errStr, "wl-clipboard") {
+		t.Error("error should contain installation hint")
+	}
+}
+
+// Test missingToolsError with single missing tool
+func TestMissingToolsErrorSingleTool(t *testing.T) {
+	b := &Backend{
+		Kind:    BackendX11,
+		Missing: []string{"xclip"},
+	}
+
+	err := missingToolsError(b)
+	errStr := err.Error()
+
+	if !strings.Contains(errStr, "xclip") {
+		t.Error("error should mention missing tool")
+	}
+	if !strings.Contains(errStr, "x11") {
+		t.Error("error should mention backend")
+	}
+}
+
+// Test printCommandHelp output
+func TestPrintCommandHelpOutput(t *testing.T) {
+	tests := []struct {
+		cmd      string
+		contains []string
+	}{
+		{"copy", []string{"Usage:", "copy", "clipboard"}},
+		{"paste", []string{"Usage:", "paste", "clipboard"}},
+		{"push", []string{"Usage:", "push", "slot"}},
+		{"fx", []string{"Usage:", "fx", "transform"}},
+	}
+
+	for _, tc := range tests {
+		output := captureOutput(func() {
+			printCommandHelp(tc.cmd)
+		})
+
+		for _, s := range tc.contains {
+			if !strings.Contains(strings.ToLower(output), strings.ToLower(s)) {
+				t.Errorf("printCommandHelp(%q) should contain %q", tc.cmd, s)
+			}
+		}
+	}
+}
+
+// Test printCommandHelp for unknown command
+func TestPrintCommandHelpUnknown(t *testing.T) {
+	output := captureOutput(func() {
+		printCommandHelp("nonexistent-command")
+	})
+
+	// Should still produce some output (fallback message)
+	if output == "" {
+		t.Error("printCommandHelp for unknown command should produce output")
+	}
+}
+
+// Test useColor with various env combinations
+func TestUseColorCombinations(t *testing.T) {
+	origNoColor := os.Getenv("NO_COLOR")
+	origTerm := os.Getenv("TERM")
+	defer func() {
+		restoreEnv("NO_COLOR", origNoColor)
+		restoreEnv("TERM", origTerm)
+	}()
+
+	// Test cases where we can definitively say useColor should return false
+	// We can't test "should return true" cases because useColor also checks
+	// if stderr is a terminal, which we can't control in tests
+
+	t.Run("NO_COLOR set returns false", func(t *testing.T) {
+		os.Setenv("NO_COLOR", "1")
+		os.Setenv("TERM", "xterm-256color")
+		if useColor() {
+			t.Error("useColor should return false when NO_COLOR is set")
+		}
+	})
+
+	t.Run("TERM=dumb returns false", func(t *testing.T) {
+		os.Unsetenv("NO_COLOR")
+		os.Setenv("TERM", "dumb")
+		if useColor() {
+			t.Error("useColor should return false when TERM=dumb")
+		}
+	})
+
+	t.Run("both NO_COLOR and dumb return false", func(t *testing.T) {
+		os.Setenv("NO_COLOR", "1")
+		os.Setenv("TERM", "dumb")
+		if useColor() {
+			t.Error("useColor should return false")
+		}
+	})
+}
+
+// Test detectWSL with clip.exe available
+func TestDetectWSLWithClipExe(t *testing.T) {
+	// Create a mock clip.exe
+	tmpDir := t.TempDir()
+	mockClipExe := tmpDir + "/clip.exe"
+	mockPowershell := tmpDir + "/powershell.exe"
+
+	// Create mock executables
+	script := "#!/bin/sh\nexit 0\n"
+	if err := os.WriteFile(mockClipExe, []byte(script), 0755); err != nil {
+		t.Fatalf("failed to create mock clip.exe: %v", err)
+	}
+	if err := os.WriteFile(mockPowershell, []byte(script), 0755); err != nil {
+		t.Fatalf("failed to create mock powershell.exe: %v", err)
+	}
+
+	// Prepend to PATH
+	origPath := os.Getenv("PATH")
+	defer os.Setenv("PATH", origPath)
+	os.Setenv("PATH", tmpDir+":"+origPath)
+
+	b := detectWSL()
+	if b == nil {
+		t.Fatal("detectWSL should return a backend when clip.exe is available")
+	}
+	if b.Kind != BackendWSL {
+		t.Errorf("expected BackendWSL, got %s", b.Kind)
+	}
+	if len(b.Missing) != 0 {
+		t.Errorf("should have no missing tools, got %v", b.Missing)
+	}
+}
+
+// Test detectWSL without powershell.exe
+func TestDetectWSLMissingPowershell(t *testing.T) {
+	// Create a mock clip.exe but no powershell.exe
+	tmpDir := t.TempDir()
+	mockClipExe := tmpDir + "/clip.exe"
+
+	script := "#!/bin/sh\nexit 0\n"
+	if err := os.WriteFile(mockClipExe, []byte(script), 0755); err != nil {
+		t.Fatalf("failed to create mock clip.exe: %v", err)
+	}
+
+	// Use a PATH that only includes our tmpDir (no real powershell)
+	origPath := os.Getenv("PATH")
+	defer os.Setenv("PATH", origPath)
+	os.Setenv("PATH", tmpDir)
+
+	b := detectWSL()
+	if b == nil {
+		t.Fatal("detectWSL should return a backend when clip.exe is available")
+	}
+	// Should have powershell.exe in Missing
+	found := false
+	for _, m := range b.Missing {
+		if m == "powershell.exe" {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Error("should have powershell.exe in Missing")
+	}
+}
+
+// Test slot commands with local backend
+func TestSlotCommandsWithLocalBackend(t *testing.T) {
+	tmpDir := t.TempDir()
+	configFile := tmpDir + "/config.yaml"
+	configContent := `sync:
+  backend: local
+`
+	if err := os.WriteFile(configFile, []byte(configContent), 0644); err != nil {
+		t.Fatalf("failed to write config: %v", err)
+	}
+
+	origConfig := os.Getenv("PIPEBOARD_CONFIG")
+	origXDG := os.Getenv("XDG_CONFIG_HOME")
+	defer func() {
+		restoreEnv("PIPEBOARD_CONFIG", origConfig)
+		restoreEnv("XDG_CONFIG_HOME", origXDG)
+	}()
+
+	os.Setenv("PIPEBOARD_CONFIG", configFile)
+	os.Setenv("XDG_CONFIG_HOME", tmpDir)
+
+	// cmdSlots should work with local backend
+	err := cmdSlots([]string{})
+	// May show "no slots" but should not error
+	if err != nil {
+		t.Errorf("cmdSlots with local backend should not error: %v", err)
+	}
+}
+
+// Test cmdShow with local backend and nonexistent slot
+func TestCmdShowLocalNonexistent(t *testing.T) {
+	tmpDir := t.TempDir()
+	configFile := tmpDir + "/config.yaml"
+	configContent := `sync:
+  backend: local
+`
+	if err := os.WriteFile(configFile, []byte(configContent), 0644); err != nil {
+		t.Fatalf("failed to write config: %v", err)
+	}
+
+	origConfig := os.Getenv("PIPEBOARD_CONFIG")
+	origXDG := os.Getenv("XDG_CONFIG_HOME")
+	defer func() {
+		restoreEnv("PIPEBOARD_CONFIG", origConfig)
+		restoreEnv("XDG_CONFIG_HOME", origXDG)
+	}()
+
+	os.Setenv("PIPEBOARD_CONFIG", configFile)
+	os.Setenv("XDG_CONFIG_HOME", tmpDir)
+
+	err := cmdShow([]string{"nonexistent-slot"})
+	if err == nil {
+		t.Error("cmdShow for nonexistent slot should error")
+	}
+}
+
+// Test cmdRm with local backend and nonexistent slot
+func TestCmdRmLocalNonexistent(t *testing.T) {
+	tmpDir := t.TempDir()
+	configFile := tmpDir + "/config.yaml"
+	configContent := `sync:
+  backend: local
+`
+	if err := os.WriteFile(configFile, []byte(configContent), 0644); err != nil {
+		t.Fatalf("failed to write config: %v", err)
+	}
+
+	origConfig := os.Getenv("PIPEBOARD_CONFIG")
+	origXDG := os.Getenv("XDG_CONFIG_HOME")
+	defer func() {
+		restoreEnv("PIPEBOARD_CONFIG", origConfig)
+		restoreEnv("XDG_CONFIG_HOME", origXDG)
+	}()
+
+	os.Setenv("PIPEBOARD_CONFIG", configFile)
+	os.Setenv("XDG_CONFIG_HOME", tmpDir)
+
+	err := cmdRm([]string{"nonexistent-slot"})
+	if err == nil {
+		t.Error("cmdRm for nonexistent slot should error")
+	}
+}
