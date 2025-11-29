@@ -1,0 +1,259 @@
+.TH PIPEBOARD 1 "November 2025" "pipeboard 0.6.0" "User Commands"
+.SH NAME
+pipeboard \- the programmable clipboard router for terminals
+.SH SYNOPSIS
+.B pipeboard
+.RI [ command ]
+.RI [ options ]
+.RI [ arguments ]
+.br
+.I stdin
+.B |
+.B pipeboard
+.SH DESCRIPTION
+.B pipeboard
+is a cross-platform clipboard CLI that works on macOS, Linux, Windows, and WSL.
+It provides unified clipboard access, peer-to-peer sync via SSH, remote storage
+via S3 or local filesystem, and programmable transforms.
+.SH COMMANDS
+.SS "Local Clipboard"
+.TP
+.B copy \fR[\fItext\fR] [\fB\-\-image\fR]
+Copy stdin or provided text to clipboard. With \fB\-\-image\fR, copies PNG data from stdin.
+.TP
+.B paste \fR[\fB\-\-image\fR]
+Output clipboard contents to stdout. With \fB\-\-image\fR, outputs clipboard image as PNG.
+.TP
+.B clear
+Clear the clipboard contents.
+.TP
+.B backend
+Show the detected clipboard backend for your platform.
+.TP
+.B doctor \fR[\fB\-\-json\fR]
+Run environment checks to verify clipboard tools are available.
+.SS "Transforms"
+.TP
+.B fx \fIname\fR [\fIname2\fR...] [\fB\-\-dry\-run\fR]
+Run transform(s) on clipboard contents. Transforms are chained and run in-place.
+If any transform fails, the clipboard remains unchanged.
+.TP
+.B fx \-\-list
+List available transforms from config.
+.SS "Peer-to-Peer (SSH)"
+.TP
+.B send \fR[\fIpeer\fR]
+Send local clipboard directly to a peer's clipboard via SSH.
+.TP
+.B recv \fR[\fIpeer\fR]
+Receive peer's clipboard into local clipboard via SSH.
+.TP
+.B peek \fR[\fIpeer\fR]
+Print peer's clipboard to stdout without modifying local clipboard.
+.TP
+.B watch \fR[\fIpeer\fR]
+Real-time bidirectional clipboard sync with a peer. Monitors both local and
+remote clipboards, automatically syncing changes. Press Ctrl+C to stop.
+.SS "Remote Slots"
+.TP
+.B push \fIname\fR
+Push current clipboard contents to a named remote slot.
+.TP
+.B pull \fIname\fR
+Pull from a remote slot into local clipboard.
+.TP
+.B show \fIname\fR
+Print remote slot contents to stdout without modifying clipboard.
+.TP
+.B slots \fR[\fB\-\-json\fR]
+List all remote slots with size and age.
+.TP
+.B rm \fIname\fR
+Delete a remote slot.
+.SS "History"
+.TP
+.B history \fR[\fB\-\-fx\fR] [\fB\-\-slots\fR] [\fB\-\-peer\fR] [\fB\-\-local\fR] [\fB\-\-json\fR]
+Show recent operations. Use filter flags to narrow results. Use \fB\-\-local\fR
+to show clipboard content history (snapshots of copied text).
+.TP
+.B recall \fIindex\fR
+Restore a previous clipboard entry from local history. Index 1 is most recent.
+.SS "Setup"
+.TP
+.B init
+Interactive configuration wizard to set up pipeboard.
+.TP
+.B completion \fIshell\fR
+Generate shell completion scripts. Supported shells: bash, zsh, fish.
+.SS "Other"
+.TP
+.B help
+Show help message.
+.TP
+.B version
+Show version information.
+.TP
+.I command
+.B \-\-help
+Show detailed help for a specific command.
+.SH OPTIONS
+.TP
+.B \-\-json
+Output in JSON format (supported by doctor, slots, history).
+.TP
+.B \-\-image, \-i
+Copy/paste PNG image data instead of text.
+.TP
+.B \-\-dry\-run
+Preview transform output without modifying clipboard.
+.TP
+.B \-\-list
+List available transforms.
+.TP
+.B \-\-fx
+Filter history to fx transforms only.
+.TP
+.B \-\-slots
+Filter history to push/pull/show/rm operations.
+.TP
+.B \-\-peer
+Filter history to send/recv/peek operations.
+.TP
+.B \-\-local
+Show local clipboard history (content snapshots).
+.SH CONFIGURATION
+Configuration is stored in \fB~/.config/pipeboard/config.yaml\fR.
+.PP
+Example configuration:
+.PP
+.nf
+version: 1
+
+defaults:
+  peer: dev              # default for send/recv/peek/watch
+
+peers:
+  dev:
+    ssh: devbox          # SSH host from ~/.ssh/config
+  mac:
+    ssh: dayna-mac.local
+
+fx:
+  pretty-json:
+    cmd: ["jq", "."]
+    description: "Format JSON"
+  strip-ansi:
+    shell: "sed 's/\\\\x1b\\\\[[0-9;]*m//g'"
+    description: "Remove ANSI escape codes"
+
+sync:
+  backend: local         # "local", "s3", or "none"
+  encryption: aes256     # client-side encryption
+  passphrase: ${PIPEBOARD_PASSPHRASE}
+  ttl_days: 30           # auto-expire slots
+.fi
+.SH ENVIRONMENT
+.TP
+.B PIPEBOARD_CONFIG
+Path to config file (default: ~/.config/pipeboard/config.yaml)
+.TP
+.B PIPEBOARD_BACKEND
+Sync backend type (overrides config)
+.TP
+.B PIPEBOARD_S3_BUCKET
+S3 bucket name
+.TP
+.B PIPEBOARD_S3_REGION
+AWS region
+.TP
+.B PIPEBOARD_S3_PREFIX
+Key prefix for S3 objects
+.TP
+.B PIPEBOARD_S3_PROFILE
+AWS profile name
+.TP
+.B PIPEBOARD_S3_SSE
+Server-side encryption type
+.TP
+.B PIPEBOARD_PASSPHRASE
+Passphrase for client-side encryption
+.TP
+.B NO_COLOR
+Disable colored output
+.SH EXAMPLES
+.TP
+Copy text to clipboard:
+echo "hello" | pipeboard
+.TP
+Paste and pipe to jq:
+pipeboard paste | jq .
+.TP
+Format JSON in clipboard:
+pipeboard fx pretty-json
+.TP
+Chain multiple transforms:
+pipeboard fx strip-ansi redact-secrets pretty-json
+.TP
+Send clipboard to peer:
+pipeboard send dev
+.TP
+Real-time sync with peer:
+pipeboard watch dev
+.TP
+Push to remote slot:
+pipeboard push kube
+.TP
+Restore from clipboard history:
+pipeboard history --local
+.br
+pipeboard recall 2
+.SH FILES
+.TP
+.B ~/.config/pipeboard/config.yaml
+Main configuration file
+.TP
+.B ~/.config/pipeboard/history.json
+Operation history
+.TP
+.B ~/.config/pipeboard/clipboard_history.json
+Local clipboard content history
+.TP
+.B ~/.config/pipeboard/slots/
+Local slot storage (when using local backend)
+.SH PLATFORMS
+.B pipeboard
+supports:
+.IP \(bu 2
+macOS (pbcopy/pbpaste)
+.IP \(bu 2
+Linux Wayland (wl-clipboard)
+.IP \(bu 2
+Linux X11 (xclip or xsel)
+.IP \(bu 2
+Windows (clip.exe + PowerShell)
+.IP \(bu 2
+WSL (clip.exe)
+.PP
+Backend detection is automatic. Run \fBpipeboard doctor\fR to check your setup.
+.SH EXIT STATUS
+.TP
+.B 0
+Success
+.TP
+.B 1
+Error occurred
+.SH BUGS
+Report bugs at https://github.com/blackwell-systems/pipeboard/issues
+.SH AUTHOR
+Blackwell Systems
+.SH COPYRIGHT
+Copyright \(co 2025 Blackwell Systems. MIT License.
+.SH SEE ALSO
+.BR pbcopy (1),
+.BR pbpaste (1),
+.BR xclip (1),
+.BR xsel (1),
+.BR wl-copy (1),
+.BR wl-paste (1)
+.PP
+Full documentation: https://blackwell-systems.github.io/pipeboard/

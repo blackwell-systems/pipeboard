@@ -25,6 +25,8 @@ var commands = map[string]func([]string) error{
 	"fx":         cmdFx,
 	"init":       cmdInit,
 	"completion": cmdCompletion,
+	"watch":      cmdWatch,
+	"recall":     cmdRecall,
 }
 
 // run executes the CLI with the given arguments, returning an exit code

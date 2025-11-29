@@ -35,7 +35,7 @@ _pipeboard() {
     cur="${COMP_WORDS[COMP_CWORD]}"
     prev="${COMP_WORDS[COMP_CWORD-1]}"
 
-    commands="copy paste clear push pull show slots rm send recv peek history fx backend doctor init completion help version"
+    commands="copy paste clear push pull show slots rm send recv peek watch history recall fx backend doctor init completion help version"
 
     case "${prev}" in
         pipeboard)
@@ -56,12 +56,16 @@ _pipeboard() {
             # Could complete slot names here if we cached them
             return 0
             ;;
-        send|recv|peek)
+        send|recv|peek|watch)
             # Could complete peer names here if we cached them
             return 0
             ;;
         history)
-            COMPREPLY=( $(compgen -W "--fx --slots --peer" -- ${cur}) )
+            COMPREPLY=( $(compgen -W "--fx --slots --peer --local --json" -- ${cur}) )
+            return 0
+            ;;
+        slots|doctor)
+            COMPREPLY=( $(compgen -W "--json" -- ${cur}) )
             return 0
             ;;
         copy|paste)
@@ -100,7 +104,9 @@ _pipeboard() {
         'send:Send clipboard to a peer'
         'recv:Receive clipboard from a peer'
         'peek:View peer clipboard without copying'
+        'watch:Real-time bidirectional clipboard sync'
         'history:Show clipboard operation history'
+        'recall:Restore entry from clipboard history'
         'fx:Run transforms on clipboard'
         'backend:Show detected clipboard backend'
         'doctor:Check system clipboard setup'
@@ -132,7 +138,13 @@ _pipeboard() {
                     _arguments \
                         '--fx[Show only transform operations]' \
                         '--slots[Show only slot operations]' \
-                        '--peer[Show only peer operations]'
+                        '--peer[Show only peer operations]' \
+                        '--local[Show local clipboard history]' \
+                        '--json[Output in JSON format]'
+                    ;;
+                slots|doctor)
+                    _arguments \
+                        '--json[Output in JSON format]'
                     ;;
                 copy|paste)
                     _arguments \
@@ -141,7 +153,7 @@ _pipeboard() {
                 push|pull|show|rm)
                     # Slot name completion would go here
                     ;;
-                send|recv|peek)
+                send|recv|peek|watch)
                     # Peer name completion would go here
                     ;;
                 *)
@@ -173,7 +185,9 @@ complete -c pipeboard -n "__fish_use_subcommand" -a "rm" -d "Delete a slot"
 complete -c pipeboard -n "__fish_use_subcommand" -a "send" -d "Send clipboard to a peer"
 complete -c pipeboard -n "__fish_use_subcommand" -a "recv" -d "Receive clipboard from a peer"
 complete -c pipeboard -n "__fish_use_subcommand" -a "peek" -d "View peer clipboard"
+complete -c pipeboard -n "__fish_use_subcommand" -a "watch" -d "Real-time clipboard sync"
 complete -c pipeboard -n "__fish_use_subcommand" -a "history" -d "Show operation history"
+complete -c pipeboard -n "__fish_use_subcommand" -a "recall" -d "Restore from clipboard history"
 complete -c pipeboard -n "__fish_use_subcommand" -a "fx" -d "Run transforms on clipboard"
 complete -c pipeboard -n "__fish_use_subcommand" -a "backend" -d "Show clipboard backend"
 complete -c pipeboard -n "__fish_use_subcommand" -a "doctor" -d "Check system setup"
@@ -193,6 +207,11 @@ complete -c pipeboard -n "__fish_seen_subcommand_from fx" -l dry-run -d "Preview
 complete -c pipeboard -n "__fish_seen_subcommand_from history" -l fx -d "Show only transforms"
 complete -c pipeboard -n "__fish_seen_subcommand_from history" -l slots -d "Show only slot ops"
 complete -c pipeboard -n "__fish_seen_subcommand_from history" -l peer -d "Show only peer ops"
+complete -c pipeboard -n "__fish_seen_subcommand_from history" -l local -d "Show clipboard history"
+complete -c pipeboard -n "__fish_seen_subcommand_from history" -l json -d "Output as JSON"
+
+# slots/doctor options
+complete -c pipeboard -n "__fish_seen_subcommand_from slots doctor" -l json -d "Output as JSON"
 
 # copy/paste options
 complete -c pipeboard -n "__fish_seen_subcommand_from copy paste" -l image -d "Image mode"

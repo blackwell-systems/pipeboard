@@ -8,6 +8,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Watch mode** - `pipeboard watch [peer]` for real-time bidirectional clipboard sync with a peer
+- **Local clipboard history** - `pipeboard history --local` shows clipboard content snapshots
+- **Recall command** - `pipeboard recall <index>` restores previous clipboard entries
+- **JSON output** - `--json` flag for `history`, `slots`, and `doctor` commands
+- **Man pages** - `man pipeboard` now available (installed with Homebrew)
 - **Shell completions** - `pipeboard completion bash|zsh|fish` generates shell completion scripts for tab completion
 - **Interactive setup wizard** - `pipeboard init` guides users through initial configuration
 - **Homebrew formula** - `brew install blackwell-systems/tap/pipeboard` now available

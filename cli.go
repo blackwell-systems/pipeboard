@@ -65,10 +65,13 @@ Clear the clipboard contents (best-effort, may not work on all platforms).`,
 Show the detected clipboard backend for your platform.
 Useful for debugging clipboard issues.`,
 
-	"doctor": `Usage: pipeboard doctor
+	"doctor": `Usage: pipeboard doctor [--json]
 
 Run environment checks to verify clipboard tools are available.
-Shows detected backend, available commands, and any issues.`,
+Shows detected backend, available commands, and any issues.
+
+Options:
+  --json     Output in JSON format`,
 
 	"push": `Usage: pipeboard push <name>
 
@@ -102,9 +105,12 @@ Examples:
   pipeboard show work               Print slot contents
   pipeboard show work | jq .        Pipe to other commands`,
 
-	"slots": `Usage: pipeboard slots
+	"slots": `Usage: pipeboard slots [--json]
 
-List all remote slots with size and age.`,
+List all remote slots with size and age.
+
+Options:
+  --json     Output in JSON format`,
 
 	"rm": `Usage: pipeboard rm <name>
 
@@ -138,7 +144,7 @@ Print peer's clipboard to stdout without modifying local clipboard.
 Arguments:
   peer    Peer name from config (optional, uses defaults.peer if omitted)`,
 
-	"history": `Usage: pipeboard history [--fx] [--slots] [--peer]
+	"history": `Usage: pipeboard history [--fx] [--slots] [--peer] [--local] [--json]
 
 Show recent clipboard operations.
 
@@ -146,10 +152,14 @@ Options:
   --fx       Filter to fx transforms only
   --slots    Filter to push/pull/show/rm only
   --peer     Filter to send/recv/peek only
+  --local    Show local clipboard history (content snapshots)
+  --json     Output in JSON format
 
 Examples:
   pipeboard history                 Show all history
-  pipeboard history --fx            Show only transforms`,
+  pipeboard history --fx            Show only transforms
+  pipeboard history --local         Show clipboard content history
+  pipeboard history --json          Output as JSON`,
 
 	"fx": `Usage: pipeboard fx <name> [name2...] [--dry-run] [--list]
 
@@ -194,6 +204,38 @@ Installation:
 
   # Fish
   pipeboard completion fish > ~/.config/fish/completions/pipeboard.fish`,
+
+	"watch": `Usage: pipeboard watch [peer]
+
+Watch and sync clipboard in real-time with a peer.
+
+Monitors both local and remote clipboards, automatically syncing changes
+bidirectionally. Great for pair programming or keeping clipboards in sync
+across machines.
+
+Arguments:
+  peer    Peer name from config (optional, uses defaults.peer if omitted)
+
+Examples:
+  pipeboard watch                    Sync with default peer
+  pipeboard watch dev                Sync with "dev" peer
+
+Press Ctrl+C to stop watching.`,
+
+	"recall": `Usage: pipeboard recall <index>
+
+Restore a previous clipboard entry from local history.
+
+Use 'pipeboard history --local' to see available entries with their indices.
+Index 1 is the most recent entry.
+
+Arguments:
+  index   Entry number from history (1 = most recent)
+
+Examples:
+  pipeboard history --local          Show clipboard history
+  pipeboard recall 1                 Restore most recent entry
+  pipeboard recall 3                 Restore third most recent entry`,
 }
 
 // stdinHasData returns true if stdin is a pipe (not a terminal)
@@ -239,7 +281,7 @@ Local clipboard:
   paste --image        Paste clipboard image as PNG to stdout
   clear                Clear clipboard (best-effort)
   backend              Show detected clipboard backend
-  doctor               Run environment checks
+  doctor [--json]      Run environment checks
 
 Transforms (programmable clipboard pipelines):
   fx <name> [name2...] Run transform(s) on clipboard (chained, in-place)
@@ -253,20 +295,23 @@ Direct peer-to-peer (SSH):
   send [peer]          Send local clipboard to peer's clipboard
   recv [peer]          Receive peer's clipboard into local clipboard
   peek [peer]          Print peer's clipboard to stdout (no local change)
+  watch [peer]         Real-time bidirectional clipboard sync
                        (peer defaults to 'defaults.peer' in config)
 
 Remote slots (S3 or local backend):
   push <name>          Push clipboard to remote slot
   pull <name>          Pull remote slot into clipboard
   show <name>          Print remote slot to stdout
-  slots                List remote slots
+  slots [--json]       List remote slots
   rm <name>            Delete remote slot
 
 History:
-  history              Show recent operations (most recent first)
+  history [--json]     Show recent operations (most recent first)
   history --fx         Filter to fx transforms only
   history --slots      Filter to push/pull/show/rm only
   history --peer       Filter to send/recv/peek only
+  history --local      Show local clipboard history (content snapshots)
+  recall <index>       Restore entry from clipboard history
 
 Setup:
   init                 Interactive configuration wizard
