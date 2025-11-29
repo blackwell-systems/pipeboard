@@ -57,6 +57,34 @@ sudo mv pipeboard /usr/local/bin/
 
 <!-- tabs:end -->
 
+## Uninstall
+
+<!-- tabs:start -->
+
+#### **Quick Uninstall**
+
+```bash
+curl -sSL https://raw.githubusercontent.com/blackwell-systems/pipeboard/main/uninstall.sh | sh
+```
+
+#### **Homebrew**
+
+```bash
+brew uninstall pipeboard
+```
+
+#### **Manual**
+
+```bash
+# Remove binary
+sudo rm /usr/local/bin/pipeboard
+
+# Remove config (optional)
+rm -rf ~/.config/pipeboard
+```
+
+<!-- tabs:end -->
+
 ## Verify Installation
 
 ```bash
