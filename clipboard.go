@@ -28,7 +28,7 @@ func cmdCopy(args []string) error {
 		return err
 	}
 	if len(b.Missing) > 0 {
-		return fmt.Errorf("backend %s is missing required tools: %s", b.Kind, strings.Join(b.Missing, ", "))
+		return missingToolsError(b)
 	}
 
 	if imageMode {
@@ -69,7 +69,7 @@ func cmdPaste(args []string) error {
 		return err
 	}
 	if len(b.Missing) > 0 {
-		return fmt.Errorf("backend %s is missing required tools: %s", b.Kind, strings.Join(b.Missing, ", "))
+		return missingToolsError(b)
 	}
 
 	if imageMode {
@@ -91,7 +91,7 @@ func cmdClear(args []string) error {
 		return err
 	}
 	if len(b.Missing) > 0 {
-		return fmt.Errorf("backend %s is missing required tools: %s", b.Kind, strings.Join(b.Missing, ", "))
+		return missingToolsError(b)
 	}
 
 	if len(b.ClearCmd) > 0 {
@@ -176,7 +176,7 @@ func readClipboard() ([]byte, error) {
 		return nil, err
 	}
 	if len(b.Missing) > 0 {
-		return nil, fmt.Errorf("backend %s is missing required tools: %s", b.Kind, strings.Join(b.Missing, ", "))
+		return nil, missingToolsError(b)
 	}
 	if len(b.PasteCmd) == 0 {
 		return nil, errors.New("no paste command configured")
@@ -199,7 +199,7 @@ func writeClipboard(data []byte) error {
 		return err
 	}
 	if len(b.Missing) > 0 {
-		return fmt.Errorf("backend %s is missing required tools: %s", b.Kind, strings.Join(b.Missing, ", "))
+		return missingToolsError(b)
 	}
 	return runWithInput(b.CopyCmd, data)
 }

@@ -14,6 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Per-command help** - `pipeboard <command> --help` shows detailed help for each command
 - **Colored error messages** - Errors now display in red (respects NO_COLOR and TERM=dumb)
 - **Implicit copy** - `echo "hello" | pipeboard` now defaults to copy when stdin has data
+- **Actionable error hints** - Missing tool errors now include installation instructions
 - **CONTRIBUTING.md** - Contributor guidelines for open source participation
 
 ### Changed
