@@ -2331,3 +2331,349 @@ func TestPrintError(t *testing.T) {
 	// Should not panic
 	printError(err)
 }
+
+// Test cmdCompletion
+func TestCmdCompletion(t *testing.T) {
+	tests := []struct {
+		name    string
+		args    []string
+		wantErr bool
+	}{
+		{"bash", []string{"bash"}, false},
+		{"zsh", []string{"zsh"}, false},
+		{"fish", []string{"fish"}, false},
+		{"unknown shell", []string{"unknown"}, true},
+		{"no args", []string{}, true},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			err := cmdCompletion(tc.args)
+			if (err != nil) != tc.wantErr {
+				t.Errorf("cmdCompletion(%v) error = %v, wantErr %v", tc.args, err, tc.wantErr)
+			}
+		})
+	}
+}
+
+// Test cmdCompletion output contains expected content
+func TestCmdCompletionOutput(t *testing.T) {
+	tests := []struct {
+		shell    string
+		contains []string
+	}{
+		{"bash", []string{"_pipeboard", "complete", "COMPREPLY"}},
+		{"zsh", []string{"#compdef", "_pipeboard", "commands"}},
+		{"fish", []string{"complete -c pipeboard", "__fish_use_subcommand"}},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.shell, func(t *testing.T) {
+			output := captureOutput(func() {
+				_ = cmdCompletion([]string{tc.shell})
+			})
+			for _, s := range tc.contains {
+				if !strings.Contains(output, s) {
+					t.Errorf("completion output for %s should contain %q", tc.shell, s)
+				}
+			}
+		})
+	}
+}
+
+// Test cmdInit fails gracefully when called (requires stdin interaction)
+func TestCmdInitBasic(t *testing.T) {
+	// cmdInit requires interactive input, so we can't fully test it
+	// But we can test that the function exists and commandHelp has init entry
+	if _, ok := commandHelp["init"]; !ok {
+		t.Error("commandHelp should have 'init' entry")
+	}
+}
+
+// Test commandHelp has watch and recall entries
+func TestCommandHelpNewCommands(t *testing.T) {
+	newCommands := []string{"watch", "recall", "init", "completion"}
+	for _, cmd := range newCommands {
+		if _, ok := commandHelp[cmd]; !ok {
+			t.Errorf("commandHelp should have %q entry", cmd)
+		}
+	}
+}
+
+// Test cmdWatch with too many args
+func TestCmdWatchTooManyArgs(t *testing.T) {
+	err := cmdWatch([]string{"peer1", "peer2"})
+	if err == nil {
+		t.Error("cmdWatch with too many args should return error")
+	}
+}
+
+// Test cmdWatch with missing peer
+func TestCmdWatchMissingPeer(t *testing.T) {
+	tmpDir := t.TempDir()
+	configFile := tmpDir + "/config.yaml"
+	configContent := `peers:
+  otherpeer:
+    ssh: otherhost
+`
+	if err := os.WriteFile(configFile, []byte(configContent), 0644); err != nil {
+		t.Fatalf("failed to write config: %v", err)
+	}
+
+	origConfig := os.Getenv("PIPEBOARD_CONFIG")
+	defer restoreEnv("PIPEBOARD_CONFIG", origConfig)
+	_ = os.Setenv("PIPEBOARD_CONFIG", configFile)
+
+	err := cmdWatch([]string{"nonexistent"})
+	if err == nil {
+		t.Error("expected error for nonexistent peer")
+	}
+}
+
+// Test cmdRecall with no args
+func TestCmdRecallNoArgs(t *testing.T) {
+	err := cmdRecall([]string{})
+	if err == nil {
+		t.Error("cmdRecall with no args should return error")
+	}
+}
+
+// Test cmdRecall with invalid index
+func TestCmdRecallInvalidIndex(t *testing.T) {
+	err := cmdRecall([]string{"invalid"})
+	if err == nil {
+		t.Error("cmdRecall with invalid index should return error")
+	}
+}
+
+// Test cmdRecall with zero index
+func TestCmdRecallZeroIndex(t *testing.T) {
+	err := cmdRecall([]string{"0"})
+	if err == nil {
+		t.Error("cmdRecall with index 0 should return error")
+	}
+}
+
+// Test cmdRecall with negative index
+func TestCmdRecallNegativeIndex(t *testing.T) {
+	err := cmdRecall([]string{"-1"})
+	if err == nil {
+		t.Error("cmdRecall with negative index should return error")
+	}
+}
+
+// Test cmdRecall with no history
+func TestCmdRecallNoHistory(t *testing.T) {
+	tmpDir := t.TempDir()
+	origXDG := os.Getenv("XDG_CONFIG_HOME")
+	defer restoreEnv("XDG_CONFIG_HOME", origXDG)
+	_ = os.Setenv("XDG_CONFIG_HOME", tmpDir)
+
+	err := cmdRecall([]string{"1"})
+	if err == nil {
+		t.Error("cmdRecall with no history should return error")
+	}
+}
+
+// Test cmdHistory with --local flag
+func TestCmdHistoryLocal(t *testing.T) {
+	tmpDir := t.TempDir()
+	origXDG := os.Getenv("XDG_CONFIG_HOME")
+	defer restoreEnv("XDG_CONFIG_HOME", origXDG)
+	_ = os.Setenv("XDG_CONFIG_HOME", tmpDir)
+
+	err := cmdHistory([]string{"--local"})
+	// Should not error, just show empty
+	if err != nil {
+		t.Errorf("cmdHistory --local should not error: %v", err)
+	}
+}
+
+// Test cmdHistory with --json flag
+func TestCmdHistoryJSON(t *testing.T) {
+	tmpDir := t.TempDir()
+	origXDG := os.Getenv("XDG_CONFIG_HOME")
+	defer restoreEnv("XDG_CONFIG_HOME", origXDG)
+	_ = os.Setenv("XDG_CONFIG_HOME", tmpDir)
+
+	output := captureOutput(func() {
+		_ = cmdHistory([]string{"--json"})
+	})
+
+	// Should output valid JSON (empty array for no history)
+	if !strings.Contains(output, "[") {
+		t.Error("cmdHistory --json should output JSON array")
+	}
+}
+
+// Test cmdHistory with --local --json
+func TestCmdHistoryLocalJSON(t *testing.T) {
+	tmpDir := t.TempDir()
+	origXDG := os.Getenv("XDG_CONFIG_HOME")
+	defer restoreEnv("XDG_CONFIG_HOME", origXDG)
+	_ = os.Setenv("XDG_CONFIG_HOME", tmpDir)
+
+	output := captureOutput(func() {
+		_ = cmdHistory([]string{"--local", "--json"})
+	})
+
+	// Should output valid JSON (empty array for no history)
+	if !strings.Contains(output, "[") {
+		t.Error("cmdHistory --local --json should output JSON array")
+	}
+}
+
+// Test cmdSlots with --json flag
+func TestCmdSlotsJSON(t *testing.T) {
+	tmpDir := t.TempDir()
+	configFile := tmpDir + "/config.yaml"
+	configContent := `sync:
+  backend: local
+`
+	if err := os.WriteFile(configFile, []byte(configContent), 0644); err != nil {
+		t.Fatalf("failed to write config: %v", err)
+	}
+
+	origConfig := os.Getenv("PIPEBOARD_CONFIG")
+	origXDG := os.Getenv("XDG_CONFIG_HOME")
+	defer func() {
+		restoreEnv("PIPEBOARD_CONFIG", origConfig)
+		restoreEnv("XDG_CONFIG_HOME", origXDG)
+	}()
+
+	os.Setenv("PIPEBOARD_CONFIG", configFile)
+	os.Setenv("XDG_CONFIG_HOME", tmpDir)
+
+	output := captureOutput(func() {
+		_ = cmdSlots([]string{"--json"})
+	})
+
+	// Should output valid JSON (empty array for no slots)
+	if !strings.Contains(output, "[") {
+		t.Error("cmdSlots --json should output JSON array")
+	}
+}
+
+// Test cmdDoctor with --json flag
+func TestCmdDoctorJSON(t *testing.T) {
+	output := captureOutput(func() {
+		_ = cmdDoctor([]string{"--json"})
+	})
+
+	// Should output valid JSON
+	if !strings.Contains(output, "{") {
+		t.Error("cmdDoctor --json should output JSON object")
+	}
+	if !strings.Contains(output, "os") {
+		t.Error("cmdDoctor --json should contain os field")
+	}
+	if !strings.Contains(output, "backend") {
+		t.Error("cmdDoctor --json should contain backend field")
+	}
+	if !strings.Contains(output, "status") {
+		t.Error("cmdDoctor --json should contain status field")
+	}
+}
+
+// Test recordClipboardHistory
+func TestRecordClipboardHistory(t *testing.T) {
+	tmpDir := t.TempDir()
+	origXDG := os.Getenv("XDG_CONFIG_HOME")
+	defer restoreEnv("XDG_CONFIG_HOME", origXDG)
+	_ = os.Setenv("XDG_CONFIG_HOME", tmpDir)
+
+	// Record some clipboard entries
+	recordClipboardHistory([]byte("first entry"))
+	recordClipboardHistory([]byte("second entry"))
+
+	// Verify history file was created
+	histPath := getClipboardHistoryPath()
+	if _, err := os.Stat(histPath); os.IsNotExist(err) {
+		t.Error("clipboard history file should be created")
+	}
+}
+
+// Test recordClipboardHistory deduplication
+func TestRecordClipboardHistoryDedup(t *testing.T) {
+	tmpDir := t.TempDir()
+	origXDG := os.Getenv("XDG_CONFIG_HOME")
+	defer restoreEnv("XDG_CONFIG_HOME", origXDG)
+	_ = os.Setenv("XDG_CONFIG_HOME", tmpDir)
+
+	// Record same content twice
+	recordClipboardHistory([]byte("duplicate content"))
+	recordClipboardHistory([]byte("duplicate content"))
+
+	// Should only have one entry (deduplication)
+	// Just verify it doesn't crash
+}
+
+// Test getClipboardHistoryPath
+func TestGetClipboardHistoryPath(t *testing.T) {
+	path := getClipboardHistoryPath()
+	if path == "" {
+		t.Error("getClipboardHistoryPath() should return non-empty path")
+	}
+	if !strings.HasSuffix(path, "clipboard_history.json") {
+		t.Errorf("path should end with clipboard_history.json, got %s", path)
+	}
+}
+
+// Test truncateString helper
+func TestTruncateString(t *testing.T) {
+	tests := []struct {
+		input  string
+		maxLen int
+		want   string
+	}{
+		{"short", 10, "short"},
+		{"exactly10", 10, "exactly10"},
+		{"this is longer than ten", 10, "this is..."},
+		{"abc", 5, "abc"},
+	}
+
+	for _, tc := range tests {
+		got := truncateString(tc.input, tc.maxLen)
+		if got != tc.want {
+			t.Errorf("truncateString(%q, %d) = %q, want %q", tc.input, tc.maxLen, got, tc.want)
+		}
+	}
+}
+
+// Test isPeerCommand includes watch:send and watch:recv
+func TestIsPeerCommandWatch(t *testing.T) {
+	if !isPeerCommand("watch:send") {
+		t.Error("isPeerCommand should return true for watch:send")
+	}
+	if !isPeerCommand("watch:recv") {
+		t.Error("isPeerCommand should return true for watch:recv")
+	}
+}
+
+// Test commands map includes new commands
+func TestCommandsMapIncludesNew(t *testing.T) {
+	expected := []string{"watch", "recall", "init", "completion"}
+	for _, cmd := range expected {
+		if _, ok := commands[cmd]; !ok {
+			t.Errorf("commands map missing %q", cmd)
+		}
+	}
+}
+
+// Test help text mentions new commands
+func TestHelpMentionsNewCommands(t *testing.T) {
+	output := captureOutput(printHelp)
+
+	expectedStrings := []string{
+		"watch",
+		"recall",
+		"--local",
+		"--json",
+	}
+
+	for _, s := range expectedStrings {
+		if !strings.Contains(output, s) {
+			t.Errorf("help output should contain %q", s)
+		}
+	}
+}

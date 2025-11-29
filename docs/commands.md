@@ -67,6 +67,9 @@ Run environment diagnostics.
 
 ```bash
 pipeboard doctor
+
+# JSON output
+pipeboard doctor --json
 ```
 
 Reports:
@@ -74,6 +77,9 @@ Reports:
 - Available clipboard tools
 - Missing dependencies
 - Image support status
+
+**Flags:**
+- `--json` — Output in JSON format
 
 ## Transforms (fx)
 
@@ -137,6 +143,20 @@ pipeboard peek
 pipeboard peek dev
 ```
 
+### watch
+
+Real-time bidirectional clipboard sync with a peer.
+
+```bash
+# Watch with default peer
+pipeboard watch
+
+# Watch with specific peer
+pipeboard watch dev
+```
+
+Monitors both local and remote clipboards and automatically syncs changes in both directions. Great for pair programming. Press Ctrl+C to stop.
+
 ## S3 Remote Slots
 
 ### push
@@ -171,6 +191,9 @@ List all remote slots.
 
 ```bash
 pipeboard slots
+
+# JSON output
+pipeboard slots --json
 ```
 
 Output includes:
@@ -178,6 +201,9 @@ Output includes:
 - Size
 - Age
 - TTL/expiry status
+
+**Flags:**
+- `--json` — Output in JSON format
 
 ### rm
 
@@ -205,12 +231,71 @@ pipeboard history --slots
 
 # Filter to peer operations (send/recv/peek)
 pipeboard history --peer
+
+# Show local clipboard history (content snapshots)
+pipeboard history --local
+
+# JSON output
+pipeboard history --json
 ```
 
 **Flags:**
 - `--fx` — Show only transform operations
 - `--slots` — Show only slot operations (push/pull/show/rm)
 - `--peer` — Show only peer operations (send/recv/peek)
+- `--local` — Show local clipboard history (content snapshots)
+- `--json` — Output in JSON format
+
+### recall
+
+Restore a previous clipboard entry from local history.
+
+```bash
+# Show history first
+pipeboard history --local
+
+# Restore most recent entry
+pipeboard recall 1
+
+# Restore third most recent
+pipeboard recall 3
+```
+
+Use `pipeboard history --local` to see available entries with their indices.
+
+## Setup
+
+### init
+
+Interactive configuration wizard to set up pipeboard.
+
+```bash
+pipeboard init
+```
+
+This guides you through:
+- Choosing a sync backend (local, S3, or none)
+- Configuring SSH peers for clipboard sharing
+- Adding example transforms (pretty-json, sort-lines, etc.)
+
+Creates `~/.config/pipeboard/config.yaml` with your choices.
+
+### completion
+
+Generate shell completion scripts for tab completion.
+
+```bash
+# Bash (add to ~/.bashrc)
+source <(pipeboard completion bash)
+
+# Zsh (add to ~/.zshrc)
+source <(pipeboard completion zsh)
+
+# Fish
+pipeboard completion fish > ~/.config/fish/completions/pipeboard.fish
+```
+
+**Supported shells:** bash, zsh, fish
 
 ## Other
 

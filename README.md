@@ -177,6 +177,9 @@ pipeboard recv dev
 
 # View peer's clipboard without copying locally
 pipeboard peek dev
+
+# Real-time bidirectional sync (great for pair programming)
+pipeboard watch dev
 ```
 
 Requires pipeboard installed on both machines. Peers are defined in config:
@@ -223,6 +226,23 @@ pipeboard paste > ~/.kube/config
 ```
 
 Features: client-side AES-256-GCM encryption, configurable TTL/expiry, server-side encryption (SSE).
+
+### Clipboard History
+
+Track and restore previous clipboard contents:
+
+```bash
+# Show clipboard content history
+pipeboard history --local
+
+# Restore most recent entry
+pipeboard recall 1
+
+# Restore third most recent
+pipeboard recall 3
+```
+
+The local clipboard history stores up to 20 entries with automatic deduplication.
 
 **Tip:** Add an alias for convenience:
 
@@ -287,7 +307,7 @@ PIPEBOARD_S3_SSE           # server-side encryption
 | `paste --image` | Output clipboard image as PNG |
 | `clear` | Clear clipboard |
 | `backend` | Show detected backend |
-| `doctor` | Check environment |
+| `doctor [--json]` | Check environment |
 
 **Transforms:**
 | Command | Description |
@@ -302,6 +322,7 @@ PIPEBOARD_S3_SSE           # server-side encryption
 | `send [peer]` | Send clipboard to peer |
 | `recv [peer]` | Receive from peer |
 | `peek [peer]` | View peer's clipboard |
+| `watch [peer]` | Real-time bidirectional sync |
 
 **S3 remote slots:**
 | Command | Description |
@@ -309,16 +330,24 @@ PIPEBOARD_S3_SSE           # server-side encryption
 | `push <slot>` | Push clipboard to slot |
 | `pull <slot>` | Pull from slot |
 | `show <slot>` | View slot contents |
-| `slots` | List all slots |
+| `slots [--json]` | List all slots |
 | `rm <slot>` | Delete slot |
 
 **History:**
 | Command | Description |
 |---------|-------------|
-| `history` | Show recent operations (newest first) |
+| `history [--json]` | Show recent operations (newest first) |
 | `history --fx` | Filter to fx transforms |
 | `history --slots` | Filter to push/pull/show/rm |
-| `history --peer` | Filter to send/recv/peek |
+| `history --peer` | Filter to send/recv/peek/watch |
+| `history --local` | Show clipboard content history |
+| `recall <index>` | Restore from clipboard history |
+
+**Setup:**
+| Command | Description |
+|---------|-------------|
+| `init` | Interactive configuration wizard |
+| `completion <shell>` | Generate shell completions (bash/zsh/fish) |
 
 ## Platform Support
 

@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -131,12 +132,53 @@ func cmdBackend(args []string) error {
 }
 
 func cmdDoctor(args []string) error {
-	if len(args) > 0 {
-		return errors.New("doctor does not take arguments")
+	var jsonOutput bool
+	for _, arg := range args {
+		switch arg {
+		case "--json":
+			jsonOutput = true
+		default:
+			return fmt.Errorf("unknown flag: %s\nusage: pipeboard doctor [--json]", arg)
+		}
 	}
+
 	b, err := detectBackend()
 	if err != nil {
 		return err
+	}
+
+	if jsonOutput {
+		status := "ok"
+		if len(b.Missing) > 0 || b.Kind == BackendUnknown {
+			status = "warning"
+		}
+		result := struct {
+			OS        string   `json:"os"`
+			Backend   string   `json:"backend"`
+			EnvSource string   `json:"env_source,omitempty"`
+			Status    string   `json:"status"`
+			CopyCmd   []string `json:"copy_cmd"`
+			PasteCmd  []string `json:"paste_cmd"`
+			ClearCmd  []string `json:"clear_cmd,omitempty"`
+			Missing   []string `json:"missing,omitempty"`
+			Notes     string   `json:"notes,omitempty"`
+		}{
+			OS:        runtime.GOOS,
+			Backend:   string(b.Kind),
+			EnvSource: b.EnvSource,
+			Status:    status,
+			CopyCmd:   b.CopyCmd,
+			PasteCmd:  b.PasteCmd,
+			ClearCmd:  b.ClearCmd,
+			Missing:   b.Missing,
+			Notes:     b.Notes,
+		}
+		out, err := json.MarshalIndent(result, "", "  ")
+		if err != nil {
+			return err
+		}
+		fmt.Println(string(out))
+		return nil
 	}
 
 	fmt.Println("pipeboard doctor")

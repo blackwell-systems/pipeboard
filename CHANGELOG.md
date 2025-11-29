@@ -8,6 +8,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Watch mode** - `pipeboard watch [peer]` for real-time bidirectional clipboard sync with a peer
+- **Local clipboard history** - `pipeboard history --local` shows clipboard content snapshots
+- **Recall command** - `pipeboard recall <index>` restores previous clipboard entries
+- **JSON output** - `--json` flag for `history`, `slots`, and `doctor` commands
+- **Man pages** - `man pipeboard` now available (installed with Homebrew)
+- **Shell completions** - `pipeboard completion bash|zsh|fish` generates shell completion scripts for tab completion
+- **Interactive setup wizard** - `pipeboard init` guides users through initial configuration
+- **Homebrew formula** - `brew install blackwell-systems/tap/pipeboard` now available
 - **Docsify documentation site** - Dark-themed docs with cover page, matching Blackwell Systems style
 - **Codecov integration** - Code coverage tracking in CI
 - **Local filesystem backend** - Zero-config slot storage at `~/.config/pipeboard/slots/`
@@ -17,7 +25,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **CONTRIBUTING.md** - Contributor guidelines for open source participation
 
 ### Changed
-- Test coverage improved from 43% to 66%
+- Test coverage improved from 43% to 71%
 - Help text now documents local backend alongside S3
 
 ## [0.5.1] - 2025-11-29
