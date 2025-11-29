@@ -95,6 +95,55 @@ pipeboard doctor
 # Checks your environment and reports any issues
 ```
 
+## Initial Setup
+
+Run the interactive setup wizard:
+
+```bash
+pipeboard init
+```
+
+This guides you through:
+- Choosing a sync backend (local, S3, or none)
+- Configuring SSH peers
+- Adding example transforms
+
+Or create a config manually — see [Configuration](configuration.md).
+
+## Shell Completions
+
+Enable tab completion for your shell:
+
+<!-- tabs:start -->
+
+#### **Bash**
+
+```bash
+# Add to ~/.bashrc
+source <(pipeboard completion bash)
+
+# Or install system-wide
+pipeboard completion bash | sudo tee /etc/bash_completion.d/pipeboard
+```
+
+#### **Zsh**
+
+```bash
+# Add to ~/.zshrc
+source <(pipeboard completion zsh)
+
+# Or if using oh-my-zsh
+pipeboard completion zsh > ~/.oh-my-zsh/completions/_pipeboard
+```
+
+#### **Fish**
+
+```bash
+pipeboard completion fish > ~/.config/fish/completions/pipeboard.fish
+```
+
+<!-- tabs:end -->
+
 ## Basic Usage
 
 ### Copy and Paste

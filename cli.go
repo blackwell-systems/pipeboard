@@ -164,6 +164,36 @@ Examples:
   pipeboard fx strip-ansi pretty-json   Chain multiple transforms
   pipeboard fx uppercase --dry-run      Preview without changing clipboard
   pipeboard fx --list                   Show available transforms`,
+
+	"init": `Usage: pipeboard init
+
+Interactive configuration wizard to set up pipeboard.
+
+Creates ~/.config/pipeboard/config.yaml with:
+  - Sync backend (local, S3, or none)
+  - Peer connections for SSH clipboard sharing
+  - Example transforms for clipboard processing
+
+Run this when first installing pipeboard.`,
+
+	"completion": `Usage: pipeboard completion <shell>
+
+Generate shell completion scripts.
+
+Supported shells:
+  bash    Bash completion
+  zsh     Zsh completion
+  fish    Fish completion
+
+Installation:
+  # Bash (add to ~/.bashrc)
+  source <(pipeboard completion bash)
+
+  # Zsh (add to ~/.zshrc)
+  source <(pipeboard completion zsh)
+
+  # Fish
+  pipeboard completion fish > ~/.config/fish/completions/pipeboard.fish`,
 }
 
 // stdinHasData returns true if stdin is a pipe (not a terminal)
@@ -237,6 +267,10 @@ History:
   history --fx         Filter to fx transforms only
   history --slots      Filter to push/pull/show/rm only
   history --peer       Filter to send/recv/peek only
+
+Setup:
+  init                 Interactive configuration wizard
+  completion <shell>   Generate shell completions (bash/zsh/fish)
 
 Other:
   <command> --help     Show help for a specific command

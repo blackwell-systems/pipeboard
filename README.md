@@ -320,6 +320,12 @@ PIPEBOARD_S3_SSE           # server-side encryption
 | `history --slots` | Filter to push/pull/show/rm |
 | `history --peer` | Filter to send/recv/peek |
 
+**Setup:**
+| Command | Description |
+|---------|-------------|
+| `init` | Interactive configuration wizard |
+| `completion <shell>` | Generate shell completions (bash/zsh/fish) |
+
 ## Platform Support
 
 | Platform | Clipboard | Image | Notes |

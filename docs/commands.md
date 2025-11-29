@@ -212,6 +212,40 @@ pipeboard history --peer
 - `--slots` — Show only slot operations (push/pull/show/rm)
 - `--peer` — Show only peer operations (send/recv/peek)
 
+## Setup
+
+### init
+
+Interactive configuration wizard to set up pipeboard.
+
+```bash
+pipeboard init
+```
+
+This guides you through:
+- Choosing a sync backend (local, S3, or none)
+- Configuring SSH peers for clipboard sharing
+- Adding example transforms (pretty-json, sort-lines, etc.)
+
+Creates `~/.config/pipeboard/config.yaml` with your choices.
+
+### completion
+
+Generate shell completion scripts for tab completion.
+
+```bash
+# Bash (add to ~/.bashrc)
+source <(pipeboard completion bash)
+
+# Zsh (add to ~/.zshrc)
+source <(pipeboard completion zsh)
+
+# Fish
+pipeboard completion fish > ~/.config/fish/completions/pipeboard.fish
+```
+
+**Supported shells:** bash, zsh, fish
+
 ## Other
 
 ### Per-Command Help
