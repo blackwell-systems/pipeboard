@@ -18,6 +18,7 @@
   - [Changelog](https://github.com/blackwell-systems/pipeboard/blob/main/CHANGELOG.md)
   - [Contributing](https://github.com/blackwell-systems/pipeboard/blob/main/CONTRIBUTING.md)
   - [Security](https://github.com/blackwell-systems/pipeboard/blob/main/SECURITY.md)
+  - [Brand Guidelines](brand.md)
 
 - **Links**
   - [![GitHub](https://icongr.am/simple/github.svg?size=16&colored=false) GitHub Repo](https://github.com/blackwell-systems/pipeboard)

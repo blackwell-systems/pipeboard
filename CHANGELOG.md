@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Local filesystem backend** - Zero-config slot storage at `~/.config/pipeboard/slots/`
 - **Per-command help** - `pipeboard <command> --help` shows detailed help for each command
 - **Colored error messages** - Errors now display in red (respects NO_COLOR and TERM=dumb)
+- **Implicit copy** - `echo "hello" | pipeboard` now defaults to copy when stdin has data
 - **CONTRIBUTING.md** - Contributor guidelines for open source participation
 
 ### Changed
