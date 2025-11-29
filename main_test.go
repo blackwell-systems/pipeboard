@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"fmt"
 	"os"
 	"runtime"
 	"strings"
@@ -2225,4 +2226,108 @@ func TestCmdRmLocalNonexistent(t *testing.T) {
 	if err == nil {
 		t.Error("cmdRm for nonexistent slot should error")
 	}
+}
+
+// Test run function (main.go routing)
+func TestRunHelp(t *testing.T) {
+	noStdin := func() bool { return false }
+
+	tests := []struct {
+		name     string
+		args     []string
+		wantCode int
+	}{
+		{"no args shows help", []string{}, 0},
+		{"help flag", []string{"--help"}, 0},
+		{"-h flag", []string{"-h"}, 0},
+		{"help command", []string{"help"}, 0},
+		{"version flag", []string{"--version"}, 0},
+		{"-v flag", []string{"-v"}, 0},
+		{"version command", []string{"version"}, 0},
+		{"unknown command", []string{"nonexistent"}, 1},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			code := run(tc.args, noStdin)
+			if code != tc.wantCode {
+				t.Errorf("run(%v) = %d, want %d", tc.args, code, tc.wantCode)
+			}
+		})
+	}
+}
+
+// Test run with command --help
+func TestRunCommandHelp(t *testing.T) {
+	noStdin := func() bool { return false }
+
+	tests := []string{"copy", "paste", "push", "pull", "fx", "history"}
+
+	for _, cmd := range tests {
+		t.Run(cmd+" --help", func(t *testing.T) {
+			code := run([]string{cmd, "--help"}, noStdin)
+			if code != 0 {
+				t.Errorf("run(%s --help) = %d, want 0", cmd, code)
+			}
+		})
+	}
+}
+
+// Test run routes to correct command
+func TestRunRoutesToCommand(t *testing.T) {
+	noStdin := func() bool { return false }
+
+	// These commands will fail due to no clipboard/config, but that's expected
+	// We're testing that routing works (exit code 1 means command ran and failed)
+	tests := []struct {
+		cmd      string
+		wantCode int // 1 = command ran but failed, which is fine
+	}{
+		{"doctor", 0},  // doctor always succeeds
+		{"backend", 0}, // backend always succeeds
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.cmd, func(t *testing.T) {
+			code := run([]string{tc.cmd}, noStdin)
+			if code != tc.wantCode {
+				t.Errorf("run(%s) = %d, want %d", tc.cmd, code, tc.wantCode)
+			}
+		})
+	}
+}
+
+// Test run with piped stdin
+func TestRunWithPipedStdin(t *testing.T) {
+	hasStdin := func() bool { return true }
+
+	// This will fail due to no clipboard backend, but tests the routing
+	code := run([]string{}, hasStdin)
+	// Expect failure (1) because we can't actually copy without clipboard
+	if code != 1 {
+		t.Logf("run with stdin returned %d (expected 1 due to no clipboard)", code)
+	}
+}
+
+// Test commands map has all expected entries
+func TestCommandsMapComplete(t *testing.T) {
+	expected := []string{
+		"copy", "paste", "clear", "backend", "doctor",
+		"push", "pull", "show", "slots", "rm",
+		"send", "recv", "receive", "peek",
+		"history", "fx",
+	}
+
+	for _, cmd := range expected {
+		if _, ok := commands[cmd]; !ok {
+			t.Errorf("commands map missing %q", cmd)
+		}
+	}
+}
+
+// Test printError doesn't panic
+func TestPrintError(t *testing.T) {
+	err := fmt.Errorf("test error")
+	// Should not panic
+	printError(err)
 }

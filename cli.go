@@ -281,11 +281,16 @@ Examples:
   pipeboard paste --image > clipboard.png`)
 }
 
-func fatal(err error) {
+// printError prints an error message to stderr with optional color
+func printError(err error) {
 	if useColor() {
 		fmt.Fprintf(os.Stderr, "%spipeboard: %v%s\n", colorRed, err, colorReset)
 	} else {
 		fmt.Fprintf(os.Stderr, "pipeboard: %v\n", err)
 	}
+}
+
+func fatal(err error) {
+	printError(err)
 	os.Exit(1)
 }
