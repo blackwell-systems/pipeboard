@@ -39,13 +39,14 @@ func detectBackend() (*Backend, error) {
 		return detectDarwin()
 	case "linux":
 		// Try Wayland, then X11, then WSL-friendly
-		if b := detectWayland(); b != nil {
+		// Only use a backend if its required tools are available
+		if b := detectWayland(); b != nil && len(b.Missing) == 0 {
 			return b, nil
 		}
-		if b := detectX11(); b != nil {
+		if b := detectX11(); b != nil && len(b.Missing) == 0 {
 			return b, nil
 		}
-		if b := detectWSL(); b != nil {
+		if b := detectWSL(); b != nil && len(b.Missing) == 0 {
 			return b, nil
 		}
 		return &Backend{
