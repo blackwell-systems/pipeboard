@@ -27,7 +27,7 @@ pipeboard keeps everything in the terminal:
 One CLI that works everywhere. No more remembering `pbcopy` vs `xclip` vs `xsel` vs `wl-copy` vs `clip.exe`.
 
 ```bash
-echo "hello" | pipeboard copy
+echo "hello" | pipeboard    # implicit copy
 pipeboard paste
 ```
 

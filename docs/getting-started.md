@@ -57,11 +57,39 @@ sudo mv pipeboard /usr/local/bin/
 
 <!-- tabs:end -->
 
+## Uninstall
+
+<!-- tabs:start -->
+
+#### **Quick Uninstall**
+
+```bash
+curl -sSL https://raw.githubusercontent.com/blackwell-systems/pipeboard/main/uninstall.sh | sh
+```
+
+#### **Homebrew**
+
+```bash
+brew uninstall pipeboard
+```
+
+#### **Manual**
+
+```bash
+# Remove binary
+sudo rm /usr/local/bin/pipeboard
+
+# Remove config (optional)
+rm -rf ~/.config/pipeboard
+```
+
+<!-- tabs:end -->
+
 ## Verify Installation
 
 ```bash
 pipeboard version
-# pipeboard v0.4.0
+# pipeboard v0.5.0
 
 pipeboard doctor
 # Checks your environment and reports any issues
@@ -72,7 +100,10 @@ pipeboard doctor
 ### Copy and Paste
 
 ```bash
-# Copy from stdin
+# Implicit copy (piped input defaults to copy)
+echo "hello world" | pipeboard
+
+# Explicit copy from stdin
 echo "hello world" | pipeboard copy
 
 # Copy text directly

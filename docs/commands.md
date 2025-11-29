@@ -7,7 +7,10 @@
 Copy content to the clipboard.
 
 ```bash
-# Copy from stdin
+# Implicit copy (piped input defaults to copy)
+echo "hello" | pipeboard
+
+# Explicit copy from stdin
 echo "hello" | pipeboard copy
 
 # Copy text argument
@@ -210,6 +213,16 @@ pipeboard history --peer
 - `--peer` — Show only peer operations (send/recv/peek)
 
 ## Other
+
+### Per-Command Help
+
+Get detailed help for any command:
+
+```bash
+pipeboard copy --help
+pipeboard push --help
+pipeboard fx --help
+```
 
 ### help
 
