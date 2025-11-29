@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.0] - 2025-11-29
+
 ### Added
 - **History search** - `pipeboard history --local --search <query>` to filter clipboard history by content
 - **Encrypted clipboard history** - When encryption is enabled, clipboard history is automatically encrypted at rest using the sync passphrase
@@ -108,7 +110,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - SSH transport for peer sync
 - Optional S3 server-side encryption (AES256/KMS)
 
-[Unreleased]: https://github.com/blackwell-systems/pipeboard/compare/v0.5.0...HEAD
+[Unreleased]: https://github.com/blackwell-systems/pipeboard/compare/v0.6.0...HEAD
+[0.6.0]: https://github.com/blackwell-systems/pipeboard/compare/v0.5.1...v0.6.0
+[0.5.1]: https://github.com/blackwell-systems/pipeboard/compare/v0.5.0...v0.5.1
 [0.5.0]: https://github.com/blackwell-systems/pipeboard/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/blackwell-systems/pipeboard/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/blackwell-systems/pipeboard/compare/v0.2.0...v0.3.0
