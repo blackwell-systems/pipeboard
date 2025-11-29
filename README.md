@@ -81,7 +81,10 @@ pipeboard keeps everything in the terminal:
 ### Local Clipboard
 
 ```bash
-# Copy from stdin
+# Implicit copy (piped input defaults to copy)
+echo "hello" | pipeboard
+
+# Explicit copy from stdin
 echo "hello" | pipeboard copy
 
 # Copy text directly

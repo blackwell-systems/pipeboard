@@ -1,9 +1,10 @@
 # Sync & Remote
 
-pipeboard supports two sync methods:
+pipeboard supports three sync methods:
 
 1. **SSH Peer Sync** — Direct machine-to-machine transfer over SSH
 2. **S3 Remote Slots** — Persistent named storage in S3
+3. **Local Slots** — Zero-config filesystem storage
 
 ## SSH Peer Sync
 
@@ -194,6 +195,62 @@ PIPEBOARD_S3_PROFILE       # AWS profile name
 PIPEBOARD_S3_SSE           # server-side encryption
 PIPEBOARD_PASSPHRASE       # encryption passphrase
 ```
+
+## Local Slots
+
+Zero-config local filesystem storage. No cloud setup required.
+
+### Setup
+
+No configuration needed! Local backend works out of the box:
+
+```yaml
+# ~/.config/pipeboard/config.yaml
+sync:
+  backend: local
+```
+
+Or even simpler - just use it (defaults to local if no sync config):
+
+```bash
+pipeboard push myslot    # stores at ~/.config/pipeboard/slots/myslot.pb
+pipeboard pull myslot
+```
+
+### Storage Location
+
+Slots are stored as JSON files:
+
+```
+~/.config/pipeboard/slots/
+├── myslot.pb
+├── kube.pb
+└── notes.pb
+```
+
+### Features
+
+Local backend supports:
+- **Encryption** — Client-side AES-256 encryption
+- **TTL** — Auto-expire slots after N days
+- **Custom path** — Store slots anywhere
+
+```yaml
+sync:
+  backend: local
+  encryption: aes256
+  passphrase: ${PIPEBOARD_PASSPHRASE}
+  ttl_days: 7
+  local:
+    path: ~/Dropbox/pipeboard/slots    # sync via Dropbox
+```
+
+### Use Cases
+
+- **Single machine** — Sync between terminal sessions
+- **Dotfiles sync** — If you sync `~/.config` via git/Dropbox, slots sync too
+- **No AWS needed** — Zero cloud setup
+- **Testing** — Try pipeboard features before configuring S3
 
 ## Example Workflows
 
