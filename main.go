@@ -175,6 +175,16 @@ Examples:
   pipeboard fx --list                   Show available transforms`,
 }
 
+// stdinHasData returns true if stdin is a pipe (not a terminal)
+func stdinHasData() bool {
+	fi, err := os.Stdin.Stat()
+	if err != nil {
+		return false
+	}
+	// Check if stdin is a pipe or has data
+	return (fi.Mode() & os.ModeCharDevice) == 0
+}
+
 // hasHelpFlag checks if args contain -h or --help
 func hasHelpFlag(args []string) bool {
 	for _, arg := range args {
@@ -220,6 +230,13 @@ type Backend struct {
 func main() {
 	args := os.Args[1:]
 	if len(args) == 0 {
+		// Check if stdin has data (piped input) - default to copy
+		if stdinHasData() {
+			if err := cmdCopy([]string{}); err != nil {
+				fatal(err)
+			}
+			return
+		}
 		printHelp()
 		return
 	}
@@ -279,6 +296,7 @@ func printHelp() {
 
 Usage:
   pipeboard <command> [args...]
+  <stdin> | pipeboard              Piped input defaults to copy
 
 Local clipboard:
   copy [text]          Copy stdin or provided text to clipboard
@@ -348,7 +366,7 @@ Config: ~/.config/pipeboard/config.yaml
     #   region: us-west-2
 
 Examples:
-  echo "hello" | pipeboard copy
+  echo "hello" | pipeboard             # implicit copy
   pipeboard paste | jq .
   pipeboard fx pretty-json           # format JSON in clipboard
   pipeboard fx strip-ansi --dry-run  # preview transform

@@ -1884,3 +1884,27 @@ func TestHelpMentionsCommandHelp(t *testing.T) {
 		t.Error("help should mention per-command --help")
 	}
 }
+
+// Test stdinHasData function exists and returns bool
+func TestStdinHasData(t *testing.T) {
+	// When running tests, stdin is not a pipe, should return false
+	result := stdinHasData()
+	// In test environment, stdin is typically not a pipe
+	if result {
+		t.Log("stdinHasData returned true (stdin is a pipe in this environment)")
+	} else {
+		t.Log("stdinHasData returned false (stdin is not a pipe)")
+	}
+	// Just verify it doesn't panic and returns a bool
+}
+
+// Test help mentions implicit copy
+func TestHelpMentionsImplicitCopy(t *testing.T) {
+	output := captureOutput(printHelp)
+	if !strings.Contains(output, "| pipeboard") {
+		t.Error("help should mention piped input syntax")
+	}
+	if !strings.Contains(output, "implicit copy") {
+		t.Error("help examples should show implicit copy")
+	}
+}
