@@ -89,7 +89,7 @@ rm -rf ~/.config/pipeboard
 
 ```bash
 pipeboard version
-# pipeboard v0.5.0
+# pipeboard v0.5.1
 
 pipeboard doctor
 # Checks your environment and reports any issues
