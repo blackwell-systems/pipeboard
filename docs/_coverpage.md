@@ -1,4 +1,4 @@
-![logo](assets/logo.png ':size=180')
+![logo](assets/pipeboard_logo.png ':size=180')
 
 # pipeboard
 

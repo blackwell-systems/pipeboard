@@ -1796,3 +1796,91 @@ func TestSlotPayloadStruct(t *testing.T) {
 		t.Error("Hostname mismatch")
 	}
 }
+
+// Test hasHelpFlag helper
+func TestHasHelpFlag(t *testing.T) {
+	tests := []struct {
+		args     []string
+		expected bool
+	}{
+		{[]string{}, false},
+		{[]string{"foo"}, false},
+		{[]string{"-h"}, true},
+		{[]string{"--help"}, true},
+		{[]string{"foo", "-h"}, true},
+		{[]string{"foo", "--help", "bar"}, true},
+		{[]string{"-help"}, false}, // single dash is not valid
+		{[]string{"help"}, false},  // word without dash is not a flag
+	}
+
+	for _, tt := range tests {
+		result := hasHelpFlag(tt.args)
+		if result != tt.expected {
+			t.Errorf("hasHelpFlag(%v) = %v, expected %v", tt.args, result, tt.expected)
+		}
+	}
+}
+
+// Test printCommandHelp for known commands
+func TestPrintCommandHelp(t *testing.T) {
+	commands := []string{"copy", "paste", "clear", "push", "pull", "show", "slots", "rm", "send", "recv", "peek", "history", "fx", "backend", "doctor"}
+
+	for _, cmd := range commands {
+		if _, ok := commandHelp[cmd]; !ok {
+			t.Errorf("command %q should have help text", cmd)
+		}
+	}
+}
+
+// Test useColor respects NO_COLOR env
+func TestUseColorNoColor(t *testing.T) {
+	orig := os.Getenv("NO_COLOR")
+	defer restoreEnv("NO_COLOR", orig)
+
+	os.Setenv("NO_COLOR", "1")
+	if useColor() {
+		t.Error("useColor should return false when NO_COLOR is set")
+	}
+}
+
+// Test useColor respects TERM=dumb
+func TestUseColorDumbTerm(t *testing.T) {
+	origNoColor := os.Getenv("NO_COLOR")
+	origTerm := os.Getenv("TERM")
+	defer restoreEnv("NO_COLOR", origNoColor)
+	defer restoreEnv("TERM", origTerm)
+
+	os.Unsetenv("NO_COLOR")
+	os.Setenv("TERM", "dumb")
+	if useColor() {
+		t.Error("useColor should return false when TERM=dumb")
+	}
+}
+
+// Test command help text contains usage
+func TestCommandHelpContainsUsage(t *testing.T) {
+	for cmd, help := range commandHelp {
+		if !strings.Contains(help, "Usage:") {
+			t.Errorf("command %q help should contain 'Usage:'", cmd)
+		}
+	}
+}
+
+// Test help text mentions local backend
+func TestHelpMentionsLocalBackend(t *testing.T) {
+	output := captureOutput(printHelp)
+	if !strings.Contains(output, "local") {
+		t.Error("help should mention local backend")
+	}
+	if !strings.Contains(output, "S3 or local") {
+		t.Error("help should say 'S3 or local backend'")
+	}
+}
+
+// Test help text mentions per-command help
+func TestHelpMentionsCommandHelp(t *testing.T) {
+	output := captureOutput(printHelp)
+	if !strings.Contains(output, "<command> --help") {
+		t.Error("help should mention per-command --help")
+	}
+}
