@@ -216,3 +216,329 @@ func TestClipboardHistoryLongContent(t *testing.T) {
 		t.Errorf("full content should be preserved: got %d bytes", len(history[0].Content))
 	}
 }
+
+// Test showClipboardHistory with empty history
+func TestShowClipboardHistoryEmpty(t *testing.T) {
+	tmpDir := t.TempDir()
+	origXDG := os.Getenv("XDG_CONFIG_HOME")
+	defer func() {
+		if origXDG != "" {
+			_ = os.Setenv("XDG_CONFIG_HOME", origXDG)
+		} else {
+			_ = os.Unsetenv("XDG_CONFIG_HOME")
+		}
+	}()
+	_ = os.Setenv("XDG_CONFIG_HOME", tmpDir)
+
+	// Create empty history file
+	historyPath := getClipboardHistoryPath()
+	_ = os.MkdirAll(tmpDir+"/pipeboard", 0755)
+	_ = os.WriteFile(historyPath, []byte("[]"), 0600)
+
+	err := showClipboardHistory(false, "")
+	if err != nil {
+		t.Errorf("showClipboardHistory should not error on empty history: %v", err)
+	}
+}
+
+// Test showClipboardHistory JSON output
+func TestShowClipboardHistoryJSON(t *testing.T) {
+	tmpDir := t.TempDir()
+	origXDG := os.Getenv("XDG_CONFIG_HOME")
+	defer func() {
+		if origXDG != "" {
+			_ = os.Setenv("XDG_CONFIG_HOME", origXDG)
+		} else {
+			_ = os.Unsetenv("XDG_CONFIG_HOME")
+		}
+	}()
+	_ = os.Setenv("XDG_CONFIG_HOME", tmpDir)
+
+	// Record some content
+	recordClipboardHistory([]byte("test content"))
+
+	err := showClipboardHistory(true, "")
+	if err != nil {
+		t.Errorf("showClipboardHistory with JSON should not error: %v", err)
+	}
+}
+
+// Test showClipboardHistory with search
+func TestShowClipboardHistorySearch(t *testing.T) {
+	tmpDir := t.TempDir()
+	origXDG := os.Getenv("XDG_CONFIG_HOME")
+	defer func() {
+		if origXDG != "" {
+			_ = os.Setenv("XDG_CONFIG_HOME", origXDG)
+		} else {
+			_ = os.Unsetenv("XDG_CONFIG_HOME")
+		}
+	}()
+	_ = os.Setenv("XDG_CONFIG_HOME", tmpDir)
+
+	// Record some content
+	recordClipboardHistory([]byte("hello world"))
+	recordClipboardHistory([]byte("foo bar"))
+	recordClipboardHistory([]byte("hello again"))
+
+	// Search for "hello"
+	err := showClipboardHistory(false, "hello")
+	if err != nil {
+		t.Errorf("showClipboardHistory with search should not error: %v", err)
+	}
+}
+
+// Test showClipboardHistory search with no matches
+func TestShowClipboardHistorySearchNoMatch(t *testing.T) {
+	tmpDir := t.TempDir()
+	origXDG := os.Getenv("XDG_CONFIG_HOME")
+	defer func() {
+		if origXDG != "" {
+			_ = os.Setenv("XDG_CONFIG_HOME", origXDG)
+		} else {
+			_ = os.Unsetenv("XDG_CONFIG_HOME")
+		}
+	}()
+	_ = os.Setenv("XDG_CONFIG_HOME", tmpDir)
+
+	// Record some content
+	recordClipboardHistory([]byte("hello world"))
+
+	// Search for something not present
+	err := showClipboardHistory(false, "xyz123notfound")
+	if err != nil {
+		t.Errorf("showClipboardHistory with no match should not error: %v", err)
+	}
+}
+
+// Test cmdRecall with index out of range
+func TestCmdRecallOutOfRange(t *testing.T) {
+	tmpDir := t.TempDir()
+	origXDG := os.Getenv("XDG_CONFIG_HOME")
+	defer func() {
+		if origXDG != "" {
+			_ = os.Setenv("XDG_CONFIG_HOME", origXDG)
+		} else {
+			_ = os.Unsetenv("XDG_CONFIG_HOME")
+		}
+	}()
+	_ = os.Setenv("XDG_CONFIG_HOME", tmpDir)
+
+	// Record one entry
+	recordClipboardHistory([]byte("test"))
+
+	// Try to recall index 100
+	err := cmdRecall([]string{"100"})
+	if err == nil {
+		t.Error("cmdRecall should error on out of range index")
+	}
+	if !strings.Contains(err.Error(), "out of range") {
+		t.Errorf("error should mention out of range: %v", err)
+	}
+}
+
+// Test cmdHistory with search flag
+func TestCmdHistorySearchFlag(t *testing.T) {
+	tmpDir := t.TempDir()
+	origXDG := os.Getenv("XDG_CONFIG_HOME")
+	defer func() {
+		if origXDG != "" {
+			_ = os.Setenv("XDG_CONFIG_HOME", origXDG)
+		} else {
+			_ = os.Unsetenv("XDG_CONFIG_HOME")
+		}
+	}()
+	_ = os.Setenv("XDG_CONFIG_HOME", tmpDir)
+
+	// Record some content
+	recordClipboardHistory([]byte("searchable content"))
+
+	err := cmdHistory([]string{"--local", "--search", "searchable"})
+	if err != nil {
+		t.Errorf("cmdHistory with --search should not error: %v", err)
+	}
+}
+
+// Test cmdHistory with --search= syntax
+func TestCmdHistorySearchEqualsSyntax(t *testing.T) {
+	tmpDir := t.TempDir()
+	origXDG := os.Getenv("XDG_CONFIG_HOME")
+	defer func() {
+		if origXDG != "" {
+			_ = os.Setenv("XDG_CONFIG_HOME", origXDG)
+		} else {
+			_ = os.Unsetenv("XDG_CONFIG_HOME")
+		}
+	}()
+	_ = os.Setenv("XDG_CONFIG_HOME", tmpDir)
+
+	recordClipboardHistory([]byte("test data"))
+
+	err := cmdHistory([]string{"--local", "--search=test"})
+	if err != nil {
+		t.Errorf("cmdHistory with --search= should not error: %v", err)
+	}
+}
+
+// Test cmdHistory with -s short flag
+func TestCmdHistorySearchShortFlag(t *testing.T) {
+	tmpDir := t.TempDir()
+	origXDG := os.Getenv("XDG_CONFIG_HOME")
+	defer func() {
+		if origXDG != "" {
+			_ = os.Setenv("XDG_CONFIG_HOME", origXDG)
+		} else {
+			_ = os.Unsetenv("XDG_CONFIG_HOME")
+		}
+	}()
+	_ = os.Setenv("XDG_CONFIG_HOME", tmpDir)
+
+	recordClipboardHistory([]byte("short flag test"))
+
+	err := cmdHistory([]string{"--local", "-s", "short"})
+	if err != nil {
+		t.Errorf("cmdHistory with -s should not error: %v", err)
+	}
+}
+
+// Test cmdHistory --search without query
+func TestCmdHistorySearchMissingQuery(t *testing.T) {
+	err := cmdHistory([]string{"--local", "--search"})
+	if err == nil {
+		t.Error("cmdHistory should error when --search has no query")
+	}
+	if !strings.Contains(err.Error(), "requires a query") {
+		t.Errorf("error should mention requires query: %v", err)
+	}
+}
+
+// Test cmdHistory with JSON output
+func TestCmdHistoryJSONOutput(t *testing.T) {
+	tmpDir := t.TempDir()
+	origXDG := os.Getenv("XDG_CONFIG_HOME")
+	defer func() {
+		if origXDG != "" {
+			_ = os.Setenv("XDG_CONFIG_HOME", origXDG)
+		} else {
+			_ = os.Unsetenv("XDG_CONFIG_HOME")
+		}
+	}()
+	_ = os.Setenv("XDG_CONFIG_HOME", tmpDir)
+
+	recordHistory("push", "slot1", 100)
+
+	err := cmdHistory([]string{"--json"})
+	if err != nil {
+		t.Errorf("cmdHistory with --json should not error: %v", err)
+	}
+}
+
+// Test cmdHistory --local with JSON and search
+func TestCmdHistoryLocalJSONWithSearch(t *testing.T) {
+	tmpDir := t.TempDir()
+	origXDG := os.Getenv("XDG_CONFIG_HOME")
+	defer func() {
+		if origXDG != "" {
+			_ = os.Setenv("XDG_CONFIG_HOME", origXDG)
+		} else {
+			_ = os.Unsetenv("XDG_CONFIG_HOME")
+		}
+	}()
+	_ = os.Setenv("XDG_CONFIG_HOME", tmpDir)
+
+	recordClipboardHistory([]byte("json search test"))
+
+	err := cmdHistory([]string{"--local", "--json", "--search", "json"})
+	if err != nil {
+		t.Errorf("cmdHistory --local --json --search should not error: %v", err)
+	}
+}
+
+// Test showClipboardHistory when file doesn't exist
+func TestShowClipboardHistoryNoFile(t *testing.T) {
+	tmpDir := t.TempDir()
+	origXDG := os.Getenv("XDG_CONFIG_HOME")
+	defer func() {
+		if origXDG != "" {
+			_ = os.Setenv("XDG_CONFIG_HOME", origXDG)
+		} else {
+			_ = os.Unsetenv("XDG_CONFIG_HOME")
+		}
+	}()
+	_ = os.Setenv("XDG_CONFIG_HOME", tmpDir)
+
+	// Don't create the file
+	err := showClipboardHistory(false, "")
+	if err != nil {
+		t.Errorf("showClipboardHistory should not error when file doesn't exist: %v", err)
+	}
+}
+
+// Test showClipboardHistory JSON when file doesn't exist
+func TestShowClipboardHistoryNoFileJSON(t *testing.T) {
+	tmpDir := t.TempDir()
+	origXDG := os.Getenv("XDG_CONFIG_HOME")
+	defer func() {
+		if origXDG != "" {
+			_ = os.Setenv("XDG_CONFIG_HOME", origXDG)
+		} else {
+			_ = os.Unsetenv("XDG_CONFIG_HOME")
+		}
+	}()
+	_ = os.Setenv("XDG_CONFIG_HOME", tmpDir)
+
+	// Don't create the file
+	err := showClipboardHistory(true, "")
+	if err != nil {
+		t.Errorf("showClipboardHistory JSON should not error when file doesn't exist: %v", err)
+	}
+}
+
+// Test cmdRecall when history file doesn't exist
+func TestCmdRecallNoHistoryFile(t *testing.T) {
+	tmpDir := t.TempDir()
+	origXDG := os.Getenv("XDG_CONFIG_HOME")
+	defer func() {
+		if origXDG != "" {
+			_ = os.Setenv("XDG_CONFIG_HOME", origXDG)
+		} else {
+			_ = os.Unsetenv("XDG_CONFIG_HOME")
+		}
+	}()
+	_ = os.Setenv("XDG_CONFIG_HOME", tmpDir)
+
+	err := cmdRecall([]string{"1"})
+	if err == nil {
+		t.Error("cmdRecall should error when history file doesn't exist")
+	}
+	if !strings.Contains(err.Error(), "no clipboard history") {
+		t.Errorf("error should mention no history: %v", err)
+	}
+}
+
+// Test cmdRecall with empty history
+func TestCmdRecallEmptyHistory(t *testing.T) {
+	tmpDir := t.TempDir()
+	origXDG := os.Getenv("XDG_CONFIG_HOME")
+	defer func() {
+		if origXDG != "" {
+			_ = os.Setenv("XDG_CONFIG_HOME", origXDG)
+		} else {
+			_ = os.Unsetenv("XDG_CONFIG_HOME")
+		}
+	}()
+	_ = os.Setenv("XDG_CONFIG_HOME", tmpDir)
+
+	// Create empty history
+	historyPath := getClipboardHistoryPath()
+	_ = os.MkdirAll(tmpDir+"/pipeboard", 0755)
+	_ = os.WriteFile(historyPath, []byte("[]"), 0600)
+
+	err := cmdRecall([]string{"1"})
+	if err == nil {
+		t.Error("cmdRecall should error when history is empty")
+	}
+	if !strings.Contains(err.Error(), "no clipboard history") {
+		t.Errorf("error should mention no history: %v", err)
+	}
+}
