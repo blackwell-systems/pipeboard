@@ -65,7 +65,7 @@ pipeboard fx strip-ansi redact-secrets pretty-json
 #### **Homebrew**
 
 ```bash
-brew install blackwell-systems/tap/pipeboard
+brew install blackwell-systems/homebrew-tap/pipeboard
 ```
 
 #### **Go**

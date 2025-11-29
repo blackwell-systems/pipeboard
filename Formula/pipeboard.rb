@@ -2,8 +2,8 @@
 # frozen_string_literal: true
 
 # Homebrew formula for pipeboard
-# Install: brew install blackwell-systems/tap/pipeboard
-# Or tap first: brew tap blackwell-systems/tap && brew install pipeboard
+# Install: brew install blackwell-systems/homebrew-tap/pipeboard
+# Or tap first: brew tap blackwell-systems/homebrew-tap && brew install pipeboard
 
 class Pipeboard < Formula
   desc "Cross-platform clipboard CLI with sync, transforms, and peer sharing"

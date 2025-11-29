@@ -22,7 +22,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Man pages** - `man pipeboard` now available (installed with Homebrew)
 - **Shell completions** - `pipeboard completion bash|zsh|fish` generates shell completion scripts for tab completion
 - **Interactive setup wizard** - `pipeboard init` guides users through initial configuration
-- **Homebrew formula** - `brew install blackwell-systems/tap/pipeboard` now available
+- **Homebrew formula** - `brew install blackwell-systems/homebrew-tap/pipeboard` now available
 - **Docsify documentation site** - Dark-themed docs with cover page, matching Blackwell Systems style
 - **Codecov integration** - Code coverage tracking in CI
 - **Local filesystem backend** - Zero-config slot storage at `~/.config/pipeboard/slots/`

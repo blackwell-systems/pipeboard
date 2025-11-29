@@ -5,7 +5,7 @@
 > The programmable clipboard router for terminals
 
 ```bash
-brew install blackwell-systems/tap/pipeboard
+brew install blackwell-systems/homebrew-tap/pipeboard
 ```
 
 ```bash
