@@ -39,8 +39,9 @@ fi
 
 echo "Installing pipeboard ${LATEST} (${OS}/${ARCH})..."
 
-# Download URL
-FILENAME="pipeboard_${OS}_${ARCH}.tar.gz"
+# Download URL - GoReleaser uses format: pipeboard_VERSION_OS_ARCH.tar.gz
+VERSION="${LATEST#v}"  # strip 'v' prefix: v0.5.0 -> 0.5.0
+FILENAME="pipeboard_${VERSION}_${OS}_${ARCH}.tar.gz"
 URL="https://github.com/${REPO}/releases/download/${LATEST}/${FILENAME}"
 
 # Create temp directory
@@ -49,7 +50,24 @@ trap "rm -rf $TMP_DIR" EXIT
 
 # Download and extract
 echo "Downloading ${URL}..."
-curl -sSL "$URL" -o "${TMP_DIR}/${FILENAME}"
+HTTP_CODE=$(curl -sSL -w "%{http_code}" "$URL" -o "${TMP_DIR}/${FILENAME}")
+if [ "$HTTP_CODE" != "200" ]; then
+    echo "Error: Failed to download release (HTTP $HTTP_CODE)"
+    echo "URL: $URL"
+    echo ""
+    echo "The release may not exist yet. Try installing via Go instead:"
+    echo "  go install github.com/blackwell-systems/pipeboard@latest"
+    exit 1
+fi
+
+# Verify it's a valid gzip file
+if ! file "${TMP_DIR}/${FILENAME}" | grep -q "gzip"; then
+    echo "Error: Downloaded file is not a valid gzip archive"
+    echo "The release asset may not exist. Try installing via Go instead:"
+    echo "  go install github.com/blackwell-systems/pipeboard@latest"
+    exit 1
+fi
+
 tar -xzf "${TMP_DIR}/${FILENAME}" -C "$TMP_DIR"
 
 # Install
