@@ -5,59 +5,64 @@ import (
 	"os"
 )
 
-func main() {
-	args := os.Args[1:]
+// commands maps command names to their handler functions
+var commands = map[string]func([]string) error{
+	"copy":    cmdCopy,
+	"paste":   cmdPaste,
+	"clear":   cmdClear,
+	"backend": cmdBackend,
+	"doctor":  cmdDoctor,
+	"push":    cmdPush,
+	"pull":    cmdPull,
+	"show":    cmdShow,
+	"slots":   cmdSlots,
+	"rm":      cmdRm,
+	"send":    cmdSend,
+	"recv":    cmdRecv,
+	"receive": cmdRecv,
+	"peek":    cmdPeek,
+	"history": cmdHistory,
+	"fx":      cmdFx,
+}
+
+// run executes the CLI with the given arguments, returning an exit code
+func run(args []string, checkStdin func() bool) int {
 	if len(args) == 0 {
 		// Check if stdin has data (piped input) - default to copy
-		if stdinHasData() {
+		if checkStdin() {
 			if err := cmdCopy([]string{}); err != nil {
-				fatal(err)
+				printError(err)
+				return 1
 			}
-			return
+			return 0
 		}
 		printHelp()
-		return
+		return 0
 	}
 
 	cmd := args[0]
 	rest := args[1:]
 
-	commands := map[string]func([]string) error{
-		"copy":    cmdCopy,
-		"paste":   cmdPaste,
-		"clear":   cmdClear,
-		"backend": cmdBackend,
-		"doctor":  cmdDoctor,
-		"push":    cmdPush,
-		"pull":    cmdPull,
-		"show":    cmdShow,
-		"slots":   cmdSlots,
-		"rm":      cmdRm,
-		"send":    cmdSend,
-		"recv":    cmdRecv,
-		"receive": cmdRecv,
-		"peek":    cmdPeek,
-		"history": cmdHistory,
-		"fx":      cmdFx,
-	}
-
 	if fn, ok := commands[cmd]; ok {
 		// Check for --help flag on any command
 		if hasHelpFlag(rest) {
 			printCommandHelp(cmd)
-			return
+			return 0
 		}
 		if err := fn(rest); err != nil {
-			fatal(err)
+			printError(err)
+			return 1
 		}
-		return
+		return 0
 	}
 
 	switch cmd {
 	case "help", "-h", "--help":
 		printHelp()
+		return 0
 	case "version", "-v", "--version":
-		fmt.Println("pipeboard v0.5.0")
+		fmt.Println("pipeboard v0.5.1")
+		return 0
 	default:
 		if useColor() {
 			fmt.Fprintf(os.Stderr, "%sUnknown command: %s%s\n\n", colorRed, cmd, colorReset)
@@ -65,6 +70,10 @@ func main() {
 			fmt.Fprintf(os.Stderr, "Unknown command: %s\n\n", cmd)
 		}
 		printHelp()
-		os.Exit(1)
+		return 1
 	}
+}
+
+func main() {
+	os.Exit(run(os.Args[1:], stdinHasData))
 }
