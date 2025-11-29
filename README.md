@@ -37,6 +37,24 @@ git clone https://github.com/blackwell-systems/pipeboard.git
 cd pipeboard && go build
 ```
 
+## Uninstall
+
+**Quick uninstall:**
+```bash
+curl -sSL https://raw.githubusercontent.com/blackwell-systems/pipeboard/main/uninstall.sh | sh
+```
+
+**Homebrew:**
+```bash
+brew uninstall pipeboard
+```
+
+**Manual:**
+```bash
+sudo rm /usr/local/bin/pipeboard
+rm -rf ~/.config/pipeboard  # optional: remove config
+```
+
 ## Why pipeboard?
 
 **Stop context-switching.** Terminal users copy and paste hundreds of times a day—config snippets, JSON payloads, API keys, log excerpts. Each time you reach for a GUI or email yourself a snippet, you break flow.
