@@ -1838,7 +1838,7 @@ func TestUseColorNoColor(t *testing.T) {
 	orig := os.Getenv("NO_COLOR")
 	defer restoreEnv("NO_COLOR", orig)
 
-	os.Setenv("NO_COLOR", "1")
+	_ = os.Setenv("NO_COLOR", "1")
 	if useColor() {
 		t.Error("useColor should return false when NO_COLOR is set")
 	}
@@ -1851,8 +1851,8 @@ func TestUseColorDumbTerm(t *testing.T) {
 	defer restoreEnv("NO_COLOR", origNoColor)
 	defer restoreEnv("TERM", origTerm)
 
-	os.Unsetenv("NO_COLOR")
-	os.Setenv("TERM", "dumb")
+	_ = os.Unsetenv("NO_COLOR")
+	_ = os.Setenv("TERM", "dumb")
 	if useColor() {
 		t.Error("useColor should return false when TERM=dumb")
 	}
@@ -2055,24 +2055,24 @@ func TestUseColorCombinations(t *testing.T) {
 	// if stderr is a terminal, which we can't control in tests
 
 	t.Run("NO_COLOR set returns false", func(t *testing.T) {
-		os.Setenv("NO_COLOR", "1")
-		os.Setenv("TERM", "xterm-256color")
+		_ = os.Setenv("NO_COLOR", "1")
+		_ = os.Setenv("TERM", "xterm-256color")
 		if useColor() {
 			t.Error("useColor should return false when NO_COLOR is set")
 		}
 	})
 
 	t.Run("TERM=dumb returns false", func(t *testing.T) {
-		os.Unsetenv("NO_COLOR")
-		os.Setenv("TERM", "dumb")
+		_ = os.Unsetenv("NO_COLOR")
+		_ = os.Setenv("TERM", "dumb")
 		if useColor() {
 			t.Error("useColor should return false when TERM=dumb")
 		}
 	})
 
 	t.Run("both NO_COLOR and dumb return false", func(t *testing.T) {
-		os.Setenv("NO_COLOR", "1")
-		os.Setenv("TERM", "dumb")
+		_ = os.Setenv("NO_COLOR", "1")
+		_ = os.Setenv("TERM", "dumb")
 		if useColor() {
 			t.Error("useColor should return false")
 		}
@@ -2097,8 +2097,8 @@ func TestDetectWSLWithClipExe(t *testing.T) {
 
 	// Prepend to PATH
 	origPath := os.Getenv("PATH")
-	defer os.Setenv("PATH", origPath)
-	os.Setenv("PATH", tmpDir+":"+origPath)
+	defer func() { _ = os.Setenv("PATH", origPath) }()
+	_ = os.Setenv("PATH", tmpDir+":"+origPath)
 
 	b := detectWSL()
 	if b == nil {
@@ -2125,8 +2125,8 @@ func TestDetectWSLMissingPowershell(t *testing.T) {
 
 	// Use a PATH that only includes our tmpDir (no real powershell)
 	origPath := os.Getenv("PATH")
-	defer os.Setenv("PATH", origPath)
-	os.Setenv("PATH", tmpDir)
+	defer func() { _ = os.Setenv("PATH", origPath) }()
+	_ = os.Setenv("PATH", tmpDir)
 
 	b := detectWSL()
 	if b == nil {
@@ -2163,8 +2163,8 @@ func TestSlotCommandsWithLocalBackend(t *testing.T) {
 		restoreEnv("XDG_CONFIG_HOME", origXDG)
 	}()
 
-	os.Setenv("PIPEBOARD_CONFIG", configFile)
-	os.Setenv("XDG_CONFIG_HOME", tmpDir)
+	_ = os.Setenv("PIPEBOARD_CONFIG", configFile)
+	_ = os.Setenv("XDG_CONFIG_HOME", tmpDir)
 
 	// cmdSlots should work with local backend
 	err := cmdSlots([]string{})
@@ -2192,8 +2192,8 @@ func TestCmdShowLocalNonexistent(t *testing.T) {
 		restoreEnv("XDG_CONFIG_HOME", origXDG)
 	}()
 
-	os.Setenv("PIPEBOARD_CONFIG", configFile)
-	os.Setenv("XDG_CONFIG_HOME", tmpDir)
+	_ = os.Setenv("PIPEBOARD_CONFIG", configFile)
+	_ = os.Setenv("XDG_CONFIG_HOME", tmpDir)
 
 	err := cmdShow([]string{"nonexistent-slot"})
 	if err == nil {
@@ -2219,8 +2219,8 @@ func TestCmdRmLocalNonexistent(t *testing.T) {
 		restoreEnv("XDG_CONFIG_HOME", origXDG)
 	}()
 
-	os.Setenv("PIPEBOARD_CONFIG", configFile)
-	os.Setenv("XDG_CONFIG_HOME", tmpDir)
+	_ = os.Setenv("PIPEBOARD_CONFIG", configFile)
+	_ = os.Setenv("XDG_CONFIG_HOME", tmpDir)
 
 	err := cmdRm([]string{"nonexistent-slot"})
 	if err == nil {
@@ -2541,8 +2541,8 @@ func TestCmdSlotsJSON(t *testing.T) {
 		restoreEnv("XDG_CONFIG_HOME", origXDG)
 	}()
 
-	os.Setenv("PIPEBOARD_CONFIG", configFile)
-	os.Setenv("XDG_CONFIG_HOME", tmpDir)
+	_ = os.Setenv("PIPEBOARD_CONFIG", configFile)
+	_ = os.Setenv("XDG_CONFIG_HOME", tmpDir)
 
 	output := captureOutput(func() {
 		_ = cmdSlots([]string{"--json"})

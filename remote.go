@@ -253,39 +253,42 @@ func (b *S3Backend) Pull(slot string) ([]byte, map[string]string, error) {
 func (b *S3Backend) List() ([]RemoteSlot, error) {
 	ctx := context.Background()
 
-	input := &s3.ListObjectsV2Input{
+	// Use paginator to handle more than 1000 objects
+	paginator := s3.NewListObjectsV2Paginator(b.client, &s3.ListObjectsV2Input{
 		Bucket: aws.String(b.bucket),
 		Prefix: aws.String(b.prefix),
-	}
-
-	result, err := b.client.ListObjectsV2(ctx, input)
-	if err != nil {
-		return nil, fmt.Errorf("listing S3 objects: %w", err)
-	}
+	})
 
 	var slots []RemoteSlot
-	for _, obj := range result.Contents {
-		key := aws.ToString(obj.Key)
-
-		// Skip if not a .pb file
-		if !strings.HasSuffix(key, ".pb") {
-			continue
+	for paginator.HasMorePages() {
+		page, err := paginator.NextPage(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("listing S3 objects: %w", err)
 		}
 
-		// Extract slot name
-		name := strings.TrimPrefix(key, b.prefix)
-		name = strings.TrimPrefix(name, "/")
-		name = strings.TrimSuffix(name, ".pb")
+		for _, obj := range page.Contents {
+			key := aws.ToString(obj.Key)
 
-		slot := RemoteSlot{
-			Name:      name,
-			Size:      aws.ToInt64(obj.Size),
-			CreatedAt: aws.ToTime(obj.LastModified),
+			// Skip if not a .pb file
+			if !strings.HasSuffix(key, ".pb") {
+				continue
+			}
+
+			// Extract slot name
+			name := strings.TrimPrefix(key, b.prefix)
+			name = strings.TrimPrefix(name, "/")
+			name = strings.TrimSuffix(name, ".pb")
+
+			slot := RemoteSlot{
+				Name:      name,
+				Size:      aws.ToInt64(obj.Size),
+				CreatedAt: aws.ToTime(obj.LastModified),
+			}
+
+			// Try to get hostname from object metadata (optional, may require HEAD request)
+			// For now, we'll get it when showing details
+			slots = append(slots, slot)
 		}
-
-		// Try to get hostname from object metadata (optional, may require HEAD request)
-		// For now, we'll get it when showing details
-		slots = append(slots, slot)
 	}
 
 	return slots, nil

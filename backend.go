@@ -6,7 +6,24 @@ import (
 	"os/exec"
 	"runtime"
 	"strings"
+	"sync"
 )
+
+// Cached backend detection - avoids repeated filesystem/env lookups
+var (
+	cachedBackend     *Backend
+	cachedBackendErr  error
+	cachedBackendOnce sync.Once
+)
+
+// getBackend returns the cached backend, detecting it on first call.
+// This avoids repeated exec.LookPath calls on every clipboard operation.
+func getBackend() (*Backend, error) {
+	cachedBackendOnce.Do(func() {
+		cachedBackend, cachedBackendErr = detectBackend()
+	})
+	return cachedBackend, cachedBackendErr
+}
 
 type BackendKind string
 

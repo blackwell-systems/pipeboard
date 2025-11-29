@@ -42,6 +42,13 @@ func cmdWatch(args []string) error {
 	fmt.Printf("Watching clipboard with peer %q (%s)\n", peerName, peer.SSH)
 	fmt.Println("Press Ctrl+C to stop")
 	fmt.Println()
+	sshMultiplexingTip := `Tip: Enable SSH multiplexing for better performance. Add to ~/.ssh/config:
+  Host *
+    ControlMaster auto
+    ControlPath ~/.ssh/sockets/%r@%h-%p
+    ControlPersist 600`
+	fmt.Println(sshMultiplexingTip)
+	fmt.Println()
 
 	return watchLoop(peerName, peer)
 }
@@ -113,9 +120,12 @@ func watchLoop(peerName string, peer PeerConfig) error {
 					lastRemoteHash = remoteHash
 					lastLocalHash = remoteHash // Prevent echo
 					recordHistory("watch:recv", peerName, int64(len(remoteData)))
+					continue // Skip hash update below to preserve echo prevention
 				}
 			}
 
+			// Update hashes only when no sync action was taken
+			// This preserves echo prevention set in the sync blocks above
 			lastLocalHash = localHash
 			lastRemoteHash = remoteHash
 		}

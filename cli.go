@@ -368,8 +368,3 @@ func printError(err error) {
 		fmt.Fprintf(os.Stderr, "pipeboard: %v\n", err)
 	}
 }
-
-func fatal(err error) {
-	printError(err)
-	os.Exit(1)
-}

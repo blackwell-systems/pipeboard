@@ -24,7 +24,7 @@ func cmdCopy(args []string) error {
 		}
 	}
 
-	b, err := detectBackend()
+	b, err := getBackend()
 	if err != nil {
 		return err
 	}
@@ -65,7 +65,7 @@ func cmdPaste(args []string) error {
 		}
 	}
 
-	b, err := detectBackend()
+	b, err := getBackend()
 	if err != nil {
 		return err
 	}
@@ -87,7 +87,7 @@ func cmdClear(args []string) error {
 	if len(args) > 0 {
 		return errors.New("clear does not take arguments")
 	}
-	b, err := detectBackend()
+	b, err := getBackend()
 	if err != nil {
 		return err
 	}
@@ -107,7 +107,7 @@ func cmdBackend(args []string) error {
 	if len(args) > 0 {
 		return errors.New("backend does not take arguments")
 	}
-	b, err := detectBackend()
+	b, err := getBackend()
 	if err != nil {
 		return err
 	}
@@ -142,7 +142,7 @@ func cmdDoctor(args []string) error {
 		}
 	}
 
-	b, err := detectBackend()
+	b, err := getBackend()
 	if err != nil {
 		return err
 	}
@@ -213,7 +213,7 @@ func cmdDoctor(args []string) error {
 
 // readClipboard reads the current local clipboard contents
 func readClipboard() ([]byte, error) {
-	b, err := detectBackend()
+	b, err := getBackend()
 	if err != nil {
 		return nil, err
 	}
@@ -236,7 +236,7 @@ func readClipboard() ([]byte, error) {
 
 // writeClipboard writes data to the local clipboard
 func writeClipboard(data []byte) error {
-	b, err := detectBackend()
+	b, err := getBackend()
 	if err != nil {
 		return err
 	}

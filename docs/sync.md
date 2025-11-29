@@ -142,7 +142,7 @@ sync:
     region: us-west-2
 ```
 
-> **Note:** TTL uses S3 lifecycle rules. You may need to configure the bucket lifecycle policy.
+> **Note:** TTL is implemented client-side. When pulling a slot, pipeboard checks the expiry timestamp and auto-deletes expired slots. Slots are not automatically deleted from S3 by lifecycle rules—expiry only occurs when accessed.
 
 ### Server-Side Encryption
 

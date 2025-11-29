@@ -6,10 +6,13 @@ pipeboard is a clipboard utility that handles potentially sensitive data. This d
 
 ## Data Handling
 
-- **No logging**: pipeboard does not log clipboard contents to disk or stdout
+- **No logging**: pipeboard does not log clipboard contents to stdout during normal operation
 - **No telemetry**: No data is sent to third parties
-- **Memory only**: Clipboard data is held in memory only for the duration of the operation
-- **No history**: pipeboard does not maintain clipboard history
+- **Local history**: pipeboard maintains an optional local clipboard history for the `recall` command:
+  - Operation history stored in `~/.config/pipeboard/history.json` (command metadata only, no content)
+  - Clipboard content history stored in `~/.config/pipeboard/clipboard_history.json` (up to 20 entries with full content)
+  - History files are stored with `0600` permissions
+  - **Security note**: If your clipboard contains sensitive data, the history files will also contain that data. Consider disabling history or periodically clearing `~/.config/pipeboard/`
 
 ## Transport Security
 

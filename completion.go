@@ -3,8 +3,6 @@ package main
 import (
 	"errors"
 	"fmt"
-	"os"
-	"path/filepath"
 )
 
 func cmdCompletion(args []string) error {
@@ -219,34 +217,3 @@ complete -c pipeboard -n "__fish_seen_subcommand_from copy paste" -l image -d "I
 # Global --help
 complete -c pipeboard -l help -d "Show help"
 `
-
-// Helper to install completions
-func installCompletion(shell string) error {
-	var path, content string
-
-	switch shell {
-	case "bash":
-		path = os.ExpandEnv("$HOME/.local/share/bash-completion/completions/pipeboard")
-		content = bashCompletion
-	case "zsh":
-		path = os.ExpandEnv("$HOME/.zsh/completions/_pipeboard")
-		content = zshCompletion
-	case "fish":
-		path = os.ExpandEnv("$HOME/.config/fish/completions/pipeboard.fish")
-		content = fishCompletion
-	default:
-		return fmt.Errorf("unknown shell: %s", shell)
-	}
-
-	// Create parent directory
-	if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
-		return fmt.Errorf("creating directory: %w", err)
-	}
-
-	if err := os.WriteFile(path, []byte(content), 0644); err != nil {
-		return fmt.Errorf("writing completion file: %w", err)
-	}
-
-	fmt.Printf("Installed %s completion to %s\n", shell, path)
-	return nil
-}

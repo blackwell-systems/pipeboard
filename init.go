@@ -37,7 +37,8 @@ func cmdInit(args []string) error {
 	backend := promptChoice("Choose backend", []string{"local", "s3", "none"}, "local")
 	config.Sync = &SyncConfig{Backend: backend}
 
-	if backend == "s3" {
+	switch backend {
+	case "s3":
 		fmt.Println()
 		fmt.Println("S3 Configuration")
 		fmt.Println("-----------------")
@@ -59,9 +60,15 @@ func cmdInit(args []string) error {
 		fmt.Println("------------------")
 		ttl := promptString("Slot expiry in days (0 = never)", "30")
 		if ttl != "0" && ttl != "" {
-			fmt.Sscanf(ttl, "%d", &config.Sync.TTLDays)
+			var ttlDays int
+			if n, err := fmt.Sscanf(ttl, "%d", &ttlDays); err != nil || n != 1 {
+				fmt.Printf("Invalid TTL value %q, using default (30 days)\n", ttl)
+				config.Sync.TTLDays = 30
+			} else {
+				config.Sync.TTLDays = ttlDays
+			}
 		}
-	} else if backend == "local" {
+	case "local":
 		config.Sync.Local = &LocalConfig{}
 		fmt.Println()
 		fmt.Println("Local slots will be stored in ~/.config/pipeboard/slots/")
@@ -177,7 +184,7 @@ func cmdInit(args []string) error {
 		fmt.Println("  pipeboard push <name> - Save clipboard to a slot")
 		fmt.Println("  pipeboard slots     - List your slots")
 	}
-	if config.Fx != nil && len(config.Fx) > 0 {
+	if len(config.Fx) > 0 {
 		fmt.Println("  pipeboard fx --list - See available transforms")
 	}
 
