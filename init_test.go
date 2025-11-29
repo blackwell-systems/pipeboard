@@ -1,6 +1,7 @@
 package main
 
 import (
+	"os"
 	"strings"
 	"testing"
 )
@@ -263,3 +264,245 @@ func TestGenerateConfigYAMLStructure(t *testing.T) {
 		t.Error("sync should come before peers")
 	}
 }
+
+// Helper to mock stdin with given input
+func mockStdin(t *testing.T, input string) func() {
+	t.Helper()
+	oldStdin := os.Stdin
+	r, w, err := os.Pipe()
+	if err != nil {
+		t.Fatalf("failed to create pipe: %v", err)
+	}
+	os.Stdin = r
+	go func() {
+		defer w.Close()
+		w.WriteString(input)
+	}()
+	return func() {
+		os.Stdin = oldStdin
+	}
+}
+
+// Test promptString with default value
+func TestPromptStringDefault(t *testing.T) {
+	restore := mockStdin(t, "\n")
+	defer restore()
+
+	result := promptString("Test prompt", "default-value")
+	if result != "default-value" {
+		t.Errorf("expected 'default-value', got %q", result)
+	}
+}
+
+// Test promptString with custom input
+func TestPromptStringCustom(t *testing.T) {
+	restore := mockStdin(t, "custom-input\n")
+	defer restore()
+
+	result := promptString("Test prompt", "default")
+	if result != "custom-input" {
+		t.Errorf("expected 'custom-input', got %q", result)
+	}
+}
+
+// Test promptString with empty default
+func TestPromptStringNoDefault(t *testing.T) {
+	restore := mockStdin(t, "user-input\n")
+	defer restore()
+
+	result := promptString("Test prompt", "")
+	if result != "user-input" {
+		t.Errorf("expected 'user-input', got %q", result)
+	}
+}
+
+// Test promptYesNo with default yes
+func TestPromptYesNoDefaultYes(t *testing.T) {
+	restore := mockStdin(t, "\n")
+	defer restore()
+
+	result := promptYesNo("Continue?", true)
+	if !result {
+		t.Error("expected true for default yes")
+	}
+}
+
+// Test promptYesNo with default no
+func TestPromptYesNoDefaultNo(t *testing.T) {
+	restore := mockStdin(t, "\n")
+	defer restore()
+
+	result := promptYesNo("Continue?", false)
+	if result {
+		t.Error("expected false for default no")
+	}
+}
+
+// Test promptYesNo with explicit yes
+func TestPromptYesNoExplicitYes(t *testing.T) {
+	restore := mockStdin(t, "y\n")
+	defer restore()
+
+	result := promptYesNo("Continue?", false)
+	if !result {
+		t.Error("expected true for 'y' input")
+	}
+}
+
+// Test promptYesNo with explicit yes (full word)
+func TestPromptYesNoExplicitYesFull(t *testing.T) {
+	restore := mockStdin(t, "yes\n")
+	defer restore()
+
+	result := promptYesNo("Continue?", false)
+	if !result {
+		t.Error("expected true for 'yes' input")
+	}
+}
+
+// Test promptYesNo with explicit no
+func TestPromptYesNoExplicitNo(t *testing.T) {
+	restore := mockStdin(t, "n\n")
+	defer restore()
+
+	result := promptYesNo("Continue?", true)
+	if result {
+		t.Error("expected false for 'n' input")
+	}
+}
+
+// Test promptChoice with default
+func TestPromptChoiceDefault(t *testing.T) {
+	restore := mockStdin(t, "\n")
+	defer restore()
+
+	result := promptChoice("Choose", []string{"a", "b", "c"}, "b")
+	if result != "b" {
+		t.Errorf("expected 'b', got %q", result)
+	}
+}
+
+// Test promptChoice with valid selection
+func TestPromptChoiceValid(t *testing.T) {
+	restore := mockStdin(t, "c\n")
+	defer restore()
+
+	result := promptChoice("Choose", []string{"a", "b", "c"}, "a")
+	if result != "c" {
+		t.Errorf("expected 'c', got %q", result)
+	}
+}
+
+// Test promptChoice with invalid selection (falls back to default)
+func TestPromptChoiceInvalid(t *testing.T) {
+	restore := mockStdin(t, "invalid\n")
+	defer restore()
+
+	result := promptChoice("Choose", []string{"a", "b", "c"}, "a")
+	if result != "a" {
+		t.Errorf("expected 'a' (default), got %q", result)
+	}
+}
+
+// Test cmdInit when config already exists and user declines overwrite
+func TestCmdInitExistsDecline(t *testing.T) {
+	tmpDir := t.TempDir()
+	origXDG := os.Getenv("XDG_CONFIG_HOME")
+	defer func() {
+		if origXDG != "" {
+			_ = os.Setenv("XDG_CONFIG_HOME", origXDG)
+		} else {
+			_ = os.Unsetenv("XDG_CONFIG_HOME")
+		}
+	}()
+	_ = os.Setenv("XDG_CONFIG_HOME", tmpDir)
+
+	// Create existing config
+	configDir := tmpDir + "/pipeboard"
+	_ = os.MkdirAll(configDir, 0755)
+	_ = os.WriteFile(configDir+"/config.yaml", []byte("existing: config"), 0600)
+
+	// Mock stdin to decline overwrite
+	restore := mockStdin(t, "n\n")
+	defer restore()
+
+	err := cmdInit([]string{})
+	if err != nil {
+		t.Errorf("cmdInit should not error when user declines: %v", err)
+	}
+}
+
+// Test cmdInit creates new config with local backend
+func TestCmdInitLocalBackend(t *testing.T) {
+	tmpDir := t.TempDir()
+	origXDG := os.Getenv("XDG_CONFIG_HOME")
+	defer func() {
+		if origXDG != "" {
+			_ = os.Setenv("XDG_CONFIG_HOME", origXDG)
+		} else {
+			_ = os.Unsetenv("XDG_CONFIG_HOME")
+		}
+	}()
+	_ = os.Setenv("XDG_CONFIG_HOME", tmpDir)
+
+	// Mock stdin: choose local backend, no peers, yes to example transforms
+	restore := mockStdin(t, "local\nn\ny\n")
+	defer restore()
+
+	err := cmdInit([]string{})
+	if err != nil {
+		t.Errorf("cmdInit should not error: %v", err)
+	}
+
+	// Verify config was created
+	configPath := tmpDir + "/pipeboard/config.yaml"
+	data, err := os.ReadFile(configPath)
+	if err != nil {
+		t.Fatalf("config file should exist: %v", err)
+	}
+
+	content := string(data)
+	if !strings.Contains(content, "backend: local") {
+		t.Error("config should contain local backend")
+	}
+	if !strings.Contains(content, "fx:") {
+		t.Error("config should contain fx section (example transforms)")
+	}
+}
+
+// Test cmdInit with none backend
+func TestCmdInitNoneBackend(t *testing.T) {
+	tmpDir := t.TempDir()
+	origXDG := os.Getenv("XDG_CONFIG_HOME")
+	defer func() {
+		if origXDG != "" {
+			_ = os.Setenv("XDG_CONFIG_HOME", origXDG)
+		} else {
+			_ = os.Unsetenv("XDG_CONFIG_HOME")
+		}
+	}()
+	_ = os.Setenv("XDG_CONFIG_HOME", tmpDir)
+
+	// Mock stdin: choose none backend, no peers, no transforms
+	restore := mockStdin(t, "none\nn\nn\n")
+	defer restore()
+
+	err := cmdInit([]string{})
+	if err != nil {
+		t.Errorf("cmdInit should not error: %v", err)
+	}
+
+	configPath := tmpDir + "/pipeboard/config.yaml"
+	data, err := os.ReadFile(configPath)
+	if err != nil {
+		t.Fatalf("config file should exist: %v", err)
+	}
+
+	if !strings.Contains(string(data), "backend: none") {
+		t.Error("config should contain none backend")
+	}
+}
+
+// Note: Multi-prompt cmdInit tests are skipped because the init.go prompt functions
+// each create their own bufio.Reader, which causes buffering issues with piped input.
+// The individual prompt functions are tested above with single-input tests.
