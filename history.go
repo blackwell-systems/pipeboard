@@ -30,8 +30,17 @@ type ClipboardHistoryEntry struct {
 }
 
 const maxHistoryEntries = 50
-const maxClipboardHistory = 20
+const defaultClipboardHistoryLimit = 20
 const previewLength = 100
+
+// getClipboardHistoryLimit returns the configured history limit or default
+func getClipboardHistoryLimit() int {
+	cfg, err := loadConfig()
+	if err != nil || cfg.History == nil || cfg.History.Limit <= 0 {
+		return defaultClipboardHistoryLimit
+	}
+	return cfg.History.Limit
+}
 
 func getHistoryPath() string {
 	configDir := os.Getenv("XDG_CONFIG_HOME")
@@ -175,8 +184,9 @@ func recordClipboardHistory(content []byte) {
 	})
 
 	// Trim to max entries
-	if len(history) > maxClipboardHistory {
-		history = history[len(history)-maxClipboardHistory:]
+	limit := getClipboardHistoryLimit()
+	if len(history) > limit {
+		history = history[len(history)-limit:]
 	}
 
 	// Save

@@ -55,8 +55,8 @@ func TestRecordClipboardHistoryMaxEntries(t *testing.T) {
 	}()
 	_ = os.Setenv("XDG_CONFIG_HOME", tmpDir)
 
-	// Record more than maxClipboardHistory entries
-	for i := 0; i < maxClipboardHistory+5; i++ {
+	// Record more than defaultClipboardHistoryLimit entries
+	for i := 0; i < defaultClipboardHistoryLimit+5; i++ {
 		recordClipboardHistory([]byte(string(rune('a' + i))))
 	}
 
@@ -71,8 +71,8 @@ func TestRecordClipboardHistoryMaxEntries(t *testing.T) {
 		t.Fatalf("failed to parse clipboard history: %v", err)
 	}
 
-	if len(history) != maxClipboardHistory {
-		t.Errorf("expected %d entries (max), got %d", maxClipboardHistory, len(history))
+	if len(history) != defaultClipboardHistoryLimit {
+		t.Errorf("expected %d entries (max), got %d", defaultClipboardHistoryLimit, len(history))
 	}
 }
 

@@ -8,6 +8,12 @@ import (
 // version is set at build time via ldflags
 var version = "dev"
 
+// Global flags
+var (
+	quietMode = false // Suppress non-essential output
+	debugMode = false // Enable debug logging
+)
+
 // commands maps command names to their handler functions
 var commands = map[string]func([]string) error{
 	"copy":       cmdCopy,
@@ -32,8 +38,27 @@ var commands = map[string]func([]string) error{
 	"recall":     cmdRecall,
 }
 
+// parseGlobalFlags extracts global flags and returns remaining args
+func parseGlobalFlags(args []string) []string {
+	var remaining []string
+	for _, arg := range args {
+		switch arg {
+		case "-q", "--quiet":
+			quietMode = true
+		case "--debug":
+			debugMode = true
+		default:
+			remaining = append(remaining, arg)
+		}
+	}
+	return remaining
+}
+
 // run executes the CLI with the given arguments, returning an exit code
 func run(args []string, checkStdin func() bool) int {
+	// Parse global flags first
+	args = parseGlobalFlags(args)
+
 	if len(args) == 0 {
 		// Check if stdin has data (piped input) - default to copy
 		if checkStdin() {

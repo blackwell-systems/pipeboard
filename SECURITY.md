@@ -43,9 +43,39 @@ pipeboard is a clipboard utility that handles potentially sensitive data. This d
 3. **SSH key auth**: Use SSH keys rather than passwords for peer sync
 4. **Don't commit configs**: Add `config.yaml` to `.gitignore` if it contains sensitive peer names
 
+## Verifying Releases
+
+All releases are signed using [Cosign](https://github.com/sigstore/cosign) keyless signing with GitHub Actions OIDC.
+
+To verify a release:
+
+```bash
+# Install cosign
+# macOS: brew install cosign
+# Linux: https://github.com/sigstore/cosign/releases
+
+# Download the release files
+curl -LO https://github.com/blackwell-systems/pipeboard/releases/download/v0.6.0/checksums.txt
+curl -LO https://github.com/blackwell-systems/pipeboard/releases/download/v0.6.0/checksums.txt.sig
+curl -LO https://github.com/blackwell-systems/pipeboard/releases/download/v0.6.0/checksums.txt.sig.pem
+
+# Verify the signature
+cosign verify-blob \
+  --signature checksums.txt.sig \
+  --certificate checksums.txt.sig.pem \
+  --certificate-identity-regexp "https://github.com/blackwell-systems/pipeboard" \
+  --certificate-oidc-issuer "https://token.actions.githubusercontent.com" \
+  checksums.txt
+
+# Then verify your downloaded binary against checksums.txt
+sha256sum -c checksums.txt --ignore-missing
+```
+
 ## Reporting Vulnerabilities
 
-If you discover a security vulnerability, please open an issue or contact the maintainers directly.
+If you discover a security vulnerability, please report it privately via [GitHub Security Advisories](https://github.com/blackwell-systems/pipeboard/security/advisories/new) or email blackwellsystems@protonmail.com.
+
+Please do not open public issues for security vulnerabilities.
 
 ## Supported Versions
 

@@ -271,8 +271,12 @@ func printHelp() {
 	fmt.Println(`pipeboard - the programmable clipboard router for terminals
 
 Usage:
-  pipeboard <command> [args...]
+  pipeboard [flags] <command> [args...]
   <stdin> | pipeboard              Piped input defaults to copy
+
+Global flags:
+  --quiet, -q            Suppress informational output
+  --debug                Enable debug logging
 
 Local clipboard:
   copy [text]          Copy stdin or provided text to clipboard
@@ -366,5 +370,25 @@ func printError(err error) {
 		fmt.Fprintf(os.Stderr, "%spipeboard: %v%s\n", colorRed, err, colorReset)
 	} else {
 		fmt.Fprintf(os.Stderr, "pipeboard: %v\n", err)
+	}
+}
+
+// printInfo prints informational output (suppressed in quiet mode)
+func printInfo(format string, args ...interface{}) {
+	if quietMode {
+		return
+	}
+	fmt.Printf(format, args...)
+}
+
+// debugLog prints debug information (only in debug mode)
+func debugLog(format string, args ...interface{}) {
+	if !debugMode {
+		return
+	}
+	if useColor() {
+		fmt.Fprintf(os.Stderr, "%s[debug] %s%s\n", colorYellow, fmt.Sprintf(format, args...), colorReset)
+	} else {
+		fmt.Fprintf(os.Stderr, "[debug] %s\n", fmt.Sprintf(format, args...))
 	}
 }

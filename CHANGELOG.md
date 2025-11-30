@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Global flags** - `--quiet` (`-q`) suppresses output, `--debug` enables debug logging
+- **Configurable history limit** - `history.limit` in config (default: 20)
+- **Debian/Ubuntu packages** - `.deb` packages in GitHub releases
+- **RPM packages** - `.rpm` packages for Fedora/RHEL in GitHub releases
+- **AUR package** - `yay -S pipeboard` for Arch Linux users
+- **Cosign release signing** - All releases cryptographically signed with keyless Cosign
+- **CodeQL security scanning** - Continuous security analysis in CI
+- **Dependabot** - Automated dependency updates
+- **Dynamic version** - Version now set at build time via ldflags
+- **Benchmark tests** - 20 performance benchmarks for encryption, compression, etc.
+- **ARCHITECTURE.md** - Developer documentation for codebase structure
+
+### Changed
+- Improved community infrastructure (issue templates, PR template, CODE_OF_CONDUCT.md)
+
 ## [0.6.0] - 2025-11-29
 
 ### Added

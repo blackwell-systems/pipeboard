@@ -16,6 +16,32 @@ brew install blackwell-systems/homebrew-tap/pipeboard
 go install github.com/blackwell-systems/pipeboard@latest
 ```
 
+#### **Debian/Ubuntu (.deb)**
+
+```bash
+# Download from GitHub releases
+curl -LO https://github.com/blackwell-systems/pipeboard/releases/latest/download/pipeboard_amd64.deb
+sudo dpkg -i pipeboard_amd64.deb
+```
+
+#### **Fedora/RHEL (.rpm)**
+
+```bash
+# Download from GitHub releases
+curl -LO https://github.com/blackwell-systems/pipeboard/releases/latest/download/pipeboard_amd64.rpm
+sudo rpm -i pipeboard_amd64.rpm
+```
+
+#### **Arch Linux (AUR)**
+
+```bash
+# Using yay
+yay -S pipeboard
+
+# Or using paru
+paru -S pipeboard
+```
+
 #### **Download Binary**
 
 **macOS (Apple Silicon)**
