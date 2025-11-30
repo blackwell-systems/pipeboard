@@ -8,11 +8,11 @@
 
 [![Homebrew](https://img.shields.io/badge/Homebrew-blackwell--systems-black?logo=homebrew)](https://github.com/blackwell-systems/homebrew-tap)
 [![Go Install](https://img.shields.io/badge/go_install-@latest-00ADD8?logo=go&logoColor=white)](https://pkg.go.dev/github.com/blackwell-systems/pipeboard)
+[![Release](https://img.shields.io/github/v/release/blackwell-systems/pipeboard)](https://github.com/blackwell-systems/pipeboard/releases)
 [![Dependabot](https://img.shields.io/badge/Dependabot-enabled-brightgreen?logo=dependabot)](https://github.com/blackwell-systems/pipeboard/security/dependabot)
 
 [![Tests](https://img.shields.io/badge/tests-414-success)](https://github.com/blackwell-systems/pipeboard)
 [![codecov](https://codecov.io/gh/blackwell-systems/pipeboard/branch/main/graph/badge.svg)](https://codecov.io/gh/blackwell-systems/pipeboard)
-[![Release](https://img.shields.io/github/v/release/blackwell-systems/pipeboard)](https://github.com/blackwell-systems/pipeboard/releases)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](https://github.com/blackwell-systems/pipeboard/issues)
 
