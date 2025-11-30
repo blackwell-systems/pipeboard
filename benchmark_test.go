@@ -11,7 +11,9 @@ import (
 // Benchmark encryption/decryption operations
 func BenchmarkEncrypt(b *testing.B) {
 	data := make([]byte, 1024) // 1KB
-	rand.Read(data)
+	if _, err := rand.Read(data); err != nil {
+		b.Fatal(err)
+	}
 	passphrase := "benchmark-passphrase"
 
 	b.ResetTimer()
@@ -25,7 +27,9 @@ func BenchmarkEncrypt(b *testing.B) {
 
 func BenchmarkEncrypt10KB(b *testing.B) {
 	data := make([]byte, 10*1024) // 10KB
-	rand.Read(data)
+	if _, err := rand.Read(data); err != nil {
+		b.Fatal(err)
+	}
 	passphrase := "benchmark-passphrase"
 
 	b.ResetTimer()
@@ -39,7 +43,9 @@ func BenchmarkEncrypt10KB(b *testing.B) {
 
 func BenchmarkEncrypt100KB(b *testing.B) {
 	data := make([]byte, 100*1024) // 100KB
-	rand.Read(data)
+	if _, err := rand.Read(data); err != nil {
+		b.Fatal(err)
+	}
 	passphrase := "benchmark-passphrase"
 
 	b.ResetTimer()
@@ -53,7 +59,9 @@ func BenchmarkEncrypt100KB(b *testing.B) {
 
 func BenchmarkDecrypt(b *testing.B) {
 	data := make([]byte, 1024) // 1KB
-	rand.Read(data)
+	if _, err := rand.Read(data); err != nil {
+		b.Fatal(err)
+	}
 	passphrase := "benchmark-passphrase"
 	encrypted, _ := encrypt(data, passphrase)
 
@@ -68,7 +76,9 @@ func BenchmarkDecrypt(b *testing.B) {
 
 func BenchmarkDecrypt10KB(b *testing.B) {
 	data := make([]byte, 10*1024) // 10KB
-	rand.Read(data)
+	if _, err := rand.Read(data); err != nil {
+		b.Fatal(err)
+	}
 	passphrase := "benchmark-passphrase"
 	encrypted, _ := encrypt(data, passphrase)
 
@@ -171,12 +181,20 @@ func BenchmarkDetectMIMELarge(b *testing.B) {
 
 // Benchmark local backend operations
 func BenchmarkLocalBackendPush(b *testing.B) {
-	tmpDir, _ := os.MkdirTemp("", "pipeboard-bench-*")
-	defer os.RemoveAll(tmpDir)
+	tmpDir, err := os.MkdirTemp("", "pipeboard-bench-*")
+	if err != nil {
+		b.Fatal(err)
+	}
+	defer func() { _ = os.RemoveAll(tmpDir) }()
 
-	backend, _ := newLocalBackend(&LocalConfig{Path: tmpDir}, "", "", 0)
+	backend, err := newLocalBackend(&LocalConfig{Path: tmpDir}, "", "", 0)
+	if err != nil {
+		b.Fatal(err)
+	}
 	data := make([]byte, 1024)
-	rand.Read(data)
+	if _, err := rand.Read(data); err != nil {
+		b.Fatal(err)
+	}
 	meta := map[string]string{"content-type": "application/octet-stream"}
 
 	b.ResetTimer()
@@ -189,14 +207,24 @@ func BenchmarkLocalBackendPush(b *testing.B) {
 }
 
 func BenchmarkLocalBackendPull(b *testing.B) {
-	tmpDir, _ := os.MkdirTemp("", "pipeboard-bench-*")
-	defer os.RemoveAll(tmpDir)
+	tmpDir, err := os.MkdirTemp("", "pipeboard-bench-*")
+	if err != nil {
+		b.Fatal(err)
+	}
+	defer func() { _ = os.RemoveAll(tmpDir) }()
 
-	backend, _ := newLocalBackend(&LocalConfig{Path: tmpDir}, "", "", 0)
+	backend, err := newLocalBackend(&LocalConfig{Path: tmpDir}, "", "", 0)
+	if err != nil {
+		b.Fatal(err)
+	}
 	data := make([]byte, 1024)
-	rand.Read(data)
+	if _, err := rand.Read(data); err != nil {
+		b.Fatal(err)
+	}
 	meta := map[string]string{"content-type": "application/octet-stream"}
-	backend.Push("bench-slot", data, meta)
+	if err := backend.Push("bench-slot", data, meta); err != nil {
+		b.Fatal(err)
+	}
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
@@ -208,16 +236,24 @@ func BenchmarkLocalBackendPull(b *testing.B) {
 }
 
 func BenchmarkLocalBackendList(b *testing.B) {
-	tmpDir, _ := os.MkdirTemp("", "pipeboard-bench-*")
-	defer os.RemoveAll(tmpDir)
+	tmpDir, err := os.MkdirTemp("", "pipeboard-bench-*")
+	if err != nil {
+		b.Fatal(err)
+	}
+	defer func() { _ = os.RemoveAll(tmpDir) }()
 
-	backend, _ := newLocalBackend(&LocalConfig{Path: tmpDir}, "", "", 0)
+	backend, err := newLocalBackend(&LocalConfig{Path: tmpDir}, "", "", 0)
+	if err != nil {
+		b.Fatal(err)
+	}
 	data := []byte("test data")
 	meta := map[string]string{}
 
 	// Create 100 slots
 	for i := 0; i < 100; i++ {
-		backend.Push(filepath.Base(tmpDir)+string(rune('a'+i%26)), data, meta)
+		if err := backend.Push(filepath.Base(tmpDir)+string(rune('a'+i%26)), data, meta); err != nil {
+			b.Fatal(err)
+		}
 	}
 
 	b.ResetTimer()
@@ -239,7 +275,9 @@ func BenchmarkConfigPath(b *testing.B) {
 // Benchmark hash computation (used in watch mode)
 func BenchmarkSHA256_1KB(b *testing.B) {
 	data := make([]byte, 1024)
-	rand.Read(data)
+	if _, err := rand.Read(data); err != nil {
+		b.Fatal(err)
+	}
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
@@ -249,7 +287,9 @@ func BenchmarkSHA256_1KB(b *testing.B) {
 
 func BenchmarkSHA256_100KB(b *testing.B) {
 	data := make([]byte, 100*1024)
-	rand.Read(data)
+	if _, err := rand.Read(data); err != nil {
+		b.Fatal(err)
+	}
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
@@ -288,7 +328,9 @@ func BenchmarkTruncateStringLong(b *testing.B) {
 func BenchmarkDeriveKey(b *testing.B) {
 	passphrase := "benchmark-passphrase"
 	salt := make([]byte, 16)
-	rand.Read(salt)
+	if _, err := rand.Read(salt); err != nil {
+		b.Fatal(err)
+	}
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {

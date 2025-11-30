@@ -80,6 +80,7 @@ func configPath() string {
 // Used by send/recv/peek commands.
 func loadConfigForPeers() (*Config, error) {
 	path := configPath()
+	debugLog("loading config from: %s", path)
 	if path == "" {
 		return nil, fmt.Errorf("could not determine config path")
 	}
@@ -87,6 +88,7 @@ func loadConfigForPeers() (*Config, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
 		if os.IsNotExist(err) {
+			debugLog("config file not found")
 			return nil, fmt.Errorf("config file not found: %s\n\nNo peers configured. Create a config file to enable send/recv.\nSee: pipeboard help", path)
 		}
 		return nil, fmt.Errorf("reading config: %w", err)
@@ -98,6 +100,7 @@ func loadConfigForPeers() (*Config, error) {
 	}
 
 	applyDefaults(&cfg)
+	debugLog("config loaded: %d peers defined", len(cfg.Peers))
 	return &cfg, nil
 }
 
@@ -105,6 +108,7 @@ func loadConfigForPeers() (*Config, error) {
 // Requires sync backend to be configured.
 func loadConfig() (*Config, error) {
 	path := configPath()
+	debugLog("loading config from: %s", path)
 	if path == "" {
 		return nil, fmt.Errorf("could not determine config path")
 	}
@@ -112,6 +116,7 @@ func loadConfig() (*Config, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
 		if os.IsNotExist(err) {
+			debugLog("config file not found")
 			return nil, fmt.Errorf("config file not found: %s\n\nRemote sync not configured. Create a config file to enable push/pull.\nSee: pipeboard help", path)
 		}
 		return nil, fmt.Errorf("reading config: %w", err)
@@ -130,6 +135,7 @@ func loadConfig() (*Config, error) {
 		return nil, err
 	}
 
+	debugLog("config loaded: sync backend=%s", cfg.Sync.Backend)
 	return &cfg, nil
 }
 
