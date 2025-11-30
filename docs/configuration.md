@@ -124,6 +124,15 @@ strip-ansi:
   shell: "sed 's/\\x1b\\[[0-9;]*m//g'"
 ```
 
+### history
+
+Clipboard history settings.
+
+```yaml
+history:
+  limit: 50    # max clipboard history entries (default: 20)
+```
+
 ### sync
 
 Remote storage configuration.

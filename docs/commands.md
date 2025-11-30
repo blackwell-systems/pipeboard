@@ -1,5 +1,23 @@
 # Commands
 
+## Global Flags
+
+These flags work with any command:
+
+| Flag | Description |
+|------|-------------|
+| `--quiet`, `-q` | Suppress informational output |
+| `--debug` | Enable debug logging (shows internal operations) |
+| `--help`, `-h` | Show help for a command |
+
+```bash
+# Quiet mode for scripting
+pipeboard --quiet push myslot
+
+# Debug mode for troubleshooting
+pipeboard --debug send dev
+```
+
 ## Local Clipboard
 
 ### copy

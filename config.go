@@ -12,6 +12,7 @@ type Config struct {
 	Version  int                   `yaml:"version"`
 	Defaults *DefaultsConfig       `yaml:"defaults,omitempty"`
 	Sync     *SyncConfig           `yaml:"sync,omitempty"`
+	History  *HistoryConfig        `yaml:"history,omitempty"`
 	Peers    map[string]PeerConfig `yaml:"peers,omitempty"`
 	Fx       map[string]FxConfig   `yaml:"fx,omitempty"` // clipboard transforms
 
@@ -22,6 +23,10 @@ type Config struct {
 
 type DefaultsConfig struct {
 	Peer string `yaml:"peer,omitempty"` // default peer for send/recv/peek
+}
+
+type HistoryConfig struct {
+	Limit int `yaml:"limit,omitempty"` // max clipboard history entries (default: 20)
 }
 
 // FxConfig defines a clipboard transform

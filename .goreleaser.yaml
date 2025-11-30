@@ -89,3 +89,23 @@ brews:
       system "#{bin}/pipeboard", "version"
     install: |
       bin.install "pipeboard"
+
+nfpms:
+  - id: packages
+    package_name: pipeboard
+    vendor: Blackwell Systems
+    homepage: https://github.com/blackwell-systems/pipeboard
+    maintainer: Blackwell Systems <blackwellsystems@protonmail.com>
+    description: Cross-platform clipboard CLI with SSH + S3 sync
+    license: MIT
+    formats:
+      - deb
+      - rpm
+    recommends:
+      - xclip
+    bindir: /usr/bin
+    contents:
+      - src: man/man1/pipeboard.1
+        dst: /usr/share/man/man1/pipeboard.1
+      - src: LICENSE
+        dst: /usr/share/doc/pipeboard/LICENSE

@@ -73,7 +73,7 @@ sha256sum -c checksums.txt --ignore-missing
 
 ## Reporting Vulnerabilities
 
-If you discover a security vulnerability, please report it privately via [GitHub Security Advisories](https://github.com/blackwell-systems/pipeboard/security/advisories/new) or email security@blackwell-systems.com.
+If you discover a security vulnerability, please report it privately via [GitHub Security Advisories](https://github.com/blackwell-systems/pipeboard/security/advisories/new) or email blackwellsystems@protonmail.com.
 
 Please do not open public issues for security vulnerabilities.
 

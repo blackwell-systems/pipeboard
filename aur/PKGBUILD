@@ -1,0 +1,36 @@
+# Maintainer: Blackwell Systems <blackwellsystems@protonmail.com>
+pkgname=pipeboard
+pkgver=0.6.0
+pkgrel=1
+pkgdesc="Cross-platform clipboard CLI with SSH + S3 sync and programmable transforms"
+arch=('x86_64' 'aarch64')
+url="https://github.com/blackwell-systems/pipeboard"
+license=('MIT')
+depends=('glibc')
+optdepends=(
+    'xclip: X11 clipboard support'
+    'xsel: X11 clipboard support (alternative)'
+    'wl-clipboard: Wayland clipboard support'
+)
+makedepends=('go>=1.21')
+source=("$pkgname-$pkgver.tar.gz::https://github.com/blackwell-systems/pipeboard/archive/v$pkgver.tar.gz")
+sha256sums=('SKIP')
+
+build() {
+    cd "$pkgname-$pkgver"
+    export CGO_ENABLED=0
+    go build -ldflags "-s -w -X main.version=$pkgver" -o pipeboard .
+}
+
+check() {
+    cd "$pkgname-$pkgver"
+    go test -race ./...
+}
+
+package() {
+    cd "$pkgname-$pkgver"
+    install -Dm755 pipeboard "$pkgdir/usr/bin/pipeboard"
+    install -Dm644 LICENSE "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+    install -Dm644 man/man1/pipeboard.1 "$pkgdir/usr/share/man/man1/pipeboard.1"
+    install -Dm644 README.md "$pkgdir/usr/share/doc/$pkgname/README.md"
+}
