@@ -47,7 +47,7 @@ func cmdSend(args []string) error {
 		return fmt.Errorf("failed to send to peer %q (%s): %w", peerName, sshTarget, err)
 	}
 
-	fmt.Printf("sent %s to peer %q (%s)\n", formatSize(int64(len(data))), peerName, sshTarget)
+	printInfo("sent %s to peer %q (%s)\n", formatSize(int64(len(data))), peerName, sshTarget)
 	recordHistory("send", peerName, int64(len(data)))
 	return nil
 }
@@ -92,7 +92,7 @@ func cmdRecv(args []string) error {
 		return err
 	}
 
-	fmt.Printf("received %s from peer %q (%s)\n", formatSize(int64(out.Len())), peerName, sshTarget)
+	printInfo("received %s from peer %q (%s)\n", formatSize(int64(out.Len())), peerName, sshTarget)
 	recordHistory("recv", peerName, int64(out.Len()))
 	return nil
 }
