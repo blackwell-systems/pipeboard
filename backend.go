@@ -50,22 +50,31 @@ type Backend struct {
 
 func detectBackend() (*Backend, error) {
 	goos := runtime.GOOS
+	debugLog("detecting clipboard backend for OS: %s", goos)
 
 	switch goos {
 	case "darwin":
-		return detectDarwin()
+		b, err := detectDarwin()
+		if err == nil {
+			debugLog("detected backend: %s", b.Kind)
+		}
+		return b, err
 	case "linux":
 		// Try Wayland, then X11, then WSL-friendly
 		// Only use a backend if its required tools are available
 		if b := detectWayland(); b != nil && len(b.Missing) == 0 {
+			debugLog("detected backend: %s (env: %s)", b.Kind, b.EnvSource)
 			return b, nil
 		}
 		if b := detectX11(); b != nil && len(b.Missing) == 0 {
+			debugLog("detected backend: %s (env: %s)", b.Kind, b.EnvSource)
 			return b, nil
 		}
 		if b := detectWSL(); b != nil && len(b.Missing) == 0 {
+			debugLog("detected backend: %s", b.Kind)
 			return b, nil
 		}
+		debugLog("no suitable backend found")
 		return &Backend{
 			Kind: BackendUnknown,
 			Notes: "No Wayland/X11/WSL clipboard command found. " +
@@ -73,7 +82,11 @@ func detectBackend() (*Backend, error) {
 		}, nil
 	case "windows":
 		// Native Windows – try clip + powershell
-		return detectWindows()
+		b, err := detectWindows()
+		if err == nil {
+			debugLog("detected backend: %s", b.Kind)
+		}
+		return b, err
 	default:
 		return nil, fmt.Errorf("unsupported OS: %s", goos)
 	}
