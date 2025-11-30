@@ -30,6 +30,44 @@ pipeboard is a clipboard utility that handles potentially sensitive data. This d
 - Data is encrypted in transit via HTTPS
 - Bucket permissions are your responsibility
 
+## Client-Side Encryption
+
+When `encryption: aes256` is enabled, pipeboard encrypts data before storing:
+
+- **Algorithm**: AES-256-GCM (authenticated encryption)
+- **Key derivation**: PBKDF2 with SHA-256, 100,000 iterations
+- **Salt**: 16 bytes, randomly generated per encryption
+- **Nonce**: 12 bytes, randomly generated per encryption
+- **Format**: `salt (16) + nonce (12) + ciphertext`
+
+Passphrase can be set via environment variable to avoid storing in config:
+
+```yaml
+sync:
+  encryption: aes256
+  passphrase: ${PIPEBOARD_PASSPHRASE}
+```
+
+**Compression**: Data > 1KB is gzip-compressed before encryption (encrypt-then-compress is avoided; compression happens first).
+
+## File Permissions
+
+- Config file: `~/.config/pipeboard/config.yaml` — recommend `chmod 600`
+- History files: Created with `0600` permissions
+- Slot directory: Created with `0700` permissions
+- Slot files: Created with `0600` permissions
+
+## TTL / Auto-Expiry
+
+Slots can be configured to auto-expire:
+
+```yaml
+sync:
+  ttl_days: 30
+```
+
+Expired slots are deleted client-side when accessed (pull/show). S3 lifecycle rules are not used.
+
 ## Configuration
 
 - Config file: `~/.config/pipeboard/config.yaml`
