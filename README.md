@@ -1,6 +1,20 @@
 # pipeboard
 
-[![CI](https://github.com/blackwell-systems/pipeboard/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/blackwell-systems/pipeboard/actions/workflows/ci.yml) [![Tests](https://img.shields.io/badge/tests-414-success)](https://github.com/blackwell-systems/pipeboard) [![codecov](https://codecov.io/gh/blackwell-systems/pipeboard/branch/main/graph/badge.svg)](https://codecov.io/gh/blackwell-systems/pipeboard) [![Go Report Card](https://goreportcard.com/badge/github.com/blackwell-systems/pipeboard)](https://goreportcard.com/report/github.com/blackwell-systems/pipeboard) [![Go Reference](https://pkg.go.dev/badge/github.com/blackwell-systems/pipeboard.svg)](https://pkg.go.dev/github.com/blackwell-systems/pipeboard) [![Release](https://img.shields.io/github/v/release/blackwell-systems/pipeboard)](https://github.com/blackwell-systems/pipeboard/releases) [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT) ![Platforms](https://img.shields.io/badge/Platforms-macOS%20%7C%20Linux%20%7C%20Windows%20%7C%20WSL-blue) [![Homebrew Tap](https://img.shields.io/badge/Homebrew-blackwell--systems%2Fhomebrew--tap-black.svg?logo=homebrew)](https://github.com/blackwell-systems/homebrew-tap) [![Go Install](https://img.shields.io/badge/go_install-@latest-00ADD8?logo=go)](https://pkg.go.dev/github.com/blackwell-systems/pipeboard) [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](https://github.com/blackwell-systems/pipeboard/issues) [![Dependabot](https://img.shields.io/badge/Dependabot-enabled-brightgreen?logo=dependabot)](https://github.com/blackwell-systems/pipeboard/security/dependabot)
+[![Blackwell Systems™](https://raw.githubusercontent.com/blackwell-systems/blackwell-docs-theme/main/badge-trademark.svg)](https://github.com/blackwell-systems)
+[![Platform](https://img.shields.io/badge/Platform-macOS%20%7C%20Linux%20%7C%20Windows%20%7C%20WSL-blue)](https://github.com/blackwell-systems/pipeboard)
+[![Go](https://img.shields.io/badge/Go-1.21+-00ADD8?logo=go&logoColor=white)](https://go.dev/)
+[![Go Report Card](https://goreportcard.com/badge/github.com/blackwell-systems/pipeboard)](https://goreportcard.com/report/github.com/blackwell-systems/pipeboard)
+[![CI](https://github.com/blackwell-systems/pipeboard/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/blackwell-systems/pipeboard/actions/workflows/ci.yml)
+
+[![Homebrew](https://img.shields.io/badge/Homebrew-blackwell--systems-black?logo=homebrew)](https://github.com/blackwell-systems/homebrew-tap)
+[![Go Install](https://img.shields.io/badge/go_install-@latest-00ADD8?logo=go&logoColor=white)](https://pkg.go.dev/github.com/blackwell-systems/pipeboard)
+[![Dependabot](https://img.shields.io/badge/Dependabot-enabled-brightgreen?logo=dependabot)](https://github.com/blackwell-systems/pipeboard/security/dependabot)
+
+[![Tests](https://img.shields.io/badge/tests-414-success)](https://github.com/blackwell-systems/pipeboard)
+[![codecov](https://codecov.io/gh/blackwell-systems/pipeboard/branch/main/graph/badge.svg)](https://codecov.io/gh/blackwell-systems/pipeboard)
+[![Release](https://img.shields.io/github/v/release/blackwell-systems/pipeboard)](https://github.com/blackwell-systems/pipeboard/releases)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
+[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](https://github.com/blackwell-systems/pipeboard/issues)
 
 **The programmable clipboard router for terminals.**
 
