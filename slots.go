@@ -32,7 +32,7 @@ func cmdPush(args []string) error {
 		return err
 	}
 
-	fmt.Printf("pushed %s to slot %q\n", formatSize(int64(len(data))), slot)
+	printInfo("pushed %s to slot %q\n", formatSize(int64(len(data))), slot)
 	recordHistory("push", slot, int64(len(data)))
 	return nil
 }
@@ -59,9 +59,9 @@ func cmdPull(args []string) error {
 
 	host := meta["hostname"]
 	if host != "" {
-		fmt.Printf("pulled %s from slot %q (source: %s)\n", formatSize(int64(len(data))), slot, host)
+		printInfo("pulled %s from slot %q (source: %s)\n", formatSize(int64(len(data))), slot, host)
 	} else {
-		fmt.Printf("pulled %s from slot %q\n", formatSize(int64(len(data))), slot)
+		printInfo("pulled %s from slot %q\n", formatSize(int64(len(data))), slot)
 	}
 	recordHistory("pull", slot, int64(len(data)))
 	return nil
@@ -173,6 +173,6 @@ func cmdRm(args []string) error {
 		return err
 	}
 
-	fmt.Printf("deleted slot %q\n", slot)
+	printInfo("deleted slot %q\n", slot)
 	return nil
 }
