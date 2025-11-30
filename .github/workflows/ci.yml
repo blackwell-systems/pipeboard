@@ -53,6 +53,7 @@ jobs:
         uses: golangci/golangci-lint-action@v9
         with:
           version: latest
+          skip-go-installation: true
 
   update-badge:
     needs: test
