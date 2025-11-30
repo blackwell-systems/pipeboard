@@ -1,6 +1,8 @@
 module github.com/blackwell-systems/pipeboard
 
-go 1.24.7
+go 1.24.0
+
+toolchain go1.24.7
 
 require (
 	github.com/aws/aws-sdk-go-v2 v1.40.0
