@@ -5,6 +5,9 @@ import (
 	"os"
 )
 
+// version is set at build time via ldflags
+var version = "dev"
+
 // commands maps command names to their handler functions
 var commands = map[string]func([]string) error{
 	"copy":       cmdCopy,
@@ -65,7 +68,7 @@ func run(args []string, checkStdin func() bool) int {
 		printHelp()
 		return 0
 	case "version", "-v", "--version":
-		fmt.Println("pipeboard v0.5.1")
+		fmt.Printf("pipeboard %s\n", version)
 		return 0
 	default:
 		if useColor() {
