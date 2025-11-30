@@ -16,7 +16,7 @@ jobs:
 
       - uses: actions/setup-go@v6
         with:
-          go-version: '1.24'
+          go-version: '1.23'
 
       - name: Run tests with coverage
         run: go test -v -race -coverprofile=coverage.out -covermode=atomic ./...
@@ -47,13 +47,12 @@ jobs:
 
       - uses: actions/setup-go@v6
         with:
-          go-version: '1.24'
+          go-version: '1.23'
 
       - name: golangci-lint
         uses: golangci/golangci-lint-action@v9
         with:
           version: latest
-          skip-go-installation: true
 
   update-badge:
     needs: test
