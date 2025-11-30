@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Documentation
+    url: https://blackwell-systems.github.io/pipeboard/
+    about: Check the documentation for usage guides and examples
+  - name: Security Vulnerability
+    url: https://github.com/blackwell-systems/pipeboard/security/advisories/new
+    about: Report security vulnerabilities privately
