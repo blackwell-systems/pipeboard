@@ -126,59 +126,6 @@ pipeboard recall 1
 pipeboard recall 3
 ```
 
-## Command Quick Reference
-
-**Local clipboard:**
-| Command | Description |
-|---------|-------------|
-| `copy [text]` | Copy stdin or text to clipboard |
-| `copy --image` | Copy PNG from stdin |
-| `paste` | Output clipboard to stdout |
-| `paste --image` | Output clipboard image as PNG |
-| `clear` | Clear clipboard |
-| `backend` | Show detected backend |
-| `doctor [--json]` | Check environment |
-
-**Transforms:**
-| Command | Description |
-|---------|-------------|
-| `fx <name> [name2...]` | Run transform(s) in-place (chainable) |
-| `fx <name> --dry-run` | Preview without modifying clipboard |
-| `fx --list` | List available transforms |
-
-**SSH peer sync:**
-| Command | Description |
-|---------|-------------|
-| `send [peer]` | Send clipboard to peer |
-| `recv [peer]` | Receive from peer |
-| `peek [peer]` | View peer's clipboard |
-| `watch [peer]` | Real-time bidirectional sync |
-
-**S3 remote slots:**
-| Command | Description |
-|---------|-------------|
-| `push <slot>` | Push clipboard to slot |
-| `pull <slot>` | Pull from slot |
-| `show <slot>` | View slot contents |
-| `slots [--json]` | List all slots |
-| `rm <slot>` | Delete slot |
-
-**History:**
-| Command | Description |
-|---------|-------------|
-| `history [--json]` | Show recent operations |
-| `history --local` | Show clipboard content history |
-| `history --local --search <q>` | Search clipboard history |
-| `recall <index>` | Restore from clipboard history |
-
-**Setup:**
-| Command | Description |
-|---------|-------------|
-| `init` | Interactive configuration wizard |
-| `completion <shell>` | Generate shell completions |
-
-See [Commands](commands.md) for full details and flags.
-
 ## Configuration
 
 Config file: `~/.config/pipeboard/config.yaml`
