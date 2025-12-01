@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.7.1] - 2025-12-01
+
+### Changed
+- Test coverage improved to 71.9% with 471 tests (up from 414)
+- New `cli_test.go` with tests for debugLog, printInfo, printError, useColor
+- Added tests for peer commands (cmdSend, cmdRecv, cmdPeek error paths)
+- Added tests for slots commands (cmdPush, cmdPull, cmdShow, cmdSlots, cmdRm)
+- Added tests for parseGlobalFlags and run() with global flags
+- cmdShow, cmdSlots, cmdRm now at 100%/93.5%/100% coverage
+
 ## [0.7.0] - 2025-11-30
 
 ### Added
@@ -128,7 +138,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - SSH transport for peer sync
 - Optional S3 server-side encryption (AES256/KMS)
 
-[Unreleased]: https://github.com/blackwell-systems/pipeboard/compare/v0.7.0...HEAD
+[Unreleased]: https://github.com/blackwell-systems/pipeboard/compare/v0.7.1...HEAD
+[0.7.1]: https://github.com/blackwell-systems/pipeboard/compare/v0.7.0...v0.7.1
 [0.7.0]: https://github.com/blackwell-systems/pipeboard/compare/v0.6.0...v0.7.0
 [0.6.0]: https://github.com/blackwell-systems/pipeboard/compare/v0.5.1...v0.6.0
 [0.5.1]: https://github.com/blackwell-systems/pipeboard/compare/v0.5.0...v0.5.1

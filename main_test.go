@@ -2677,3 +2677,152 @@ func TestHelpMentionsNewCommands(t *testing.T) {
 		}
 	}
 }
+
+// Test parseGlobalFlags extracts quiet flag
+func TestParseGlobalFlagsQuiet(t *testing.T) {
+	origQuiet := quietMode
+	defer func() { quietMode = origQuiet }()
+
+	quietMode = false
+	remaining := parseGlobalFlags([]string{"-q", "copy", "text"})
+
+	if !quietMode {
+		t.Error("parseGlobalFlags should set quietMode for -q")
+	}
+	if len(remaining) != 2 || remaining[0] != "copy" || remaining[1] != "text" {
+		t.Errorf("remaining args should be [copy text], got %v", remaining)
+	}
+}
+
+// Test parseGlobalFlags extracts --quiet flag
+func TestParseGlobalFlagsQuietLong(t *testing.T) {
+	origQuiet := quietMode
+	defer func() { quietMode = origQuiet }()
+
+	quietMode = false
+	remaining := parseGlobalFlags([]string{"--quiet", "paste"})
+
+	if !quietMode {
+		t.Error("parseGlobalFlags should set quietMode for --quiet")
+	}
+	if len(remaining) != 1 || remaining[0] != "paste" {
+		t.Errorf("remaining args should be [paste], got %v", remaining)
+	}
+}
+
+// Test parseGlobalFlags extracts debug flag
+func TestParseGlobalFlagsDebug(t *testing.T) {
+	origDebug := debugMode
+	defer func() { debugMode = origDebug }()
+
+	debugMode = false
+	remaining := parseGlobalFlags([]string{"--debug", "doctor"})
+
+	if !debugMode {
+		t.Error("parseGlobalFlags should set debugMode for --debug")
+	}
+	if len(remaining) != 1 || remaining[0] != "doctor" {
+		t.Errorf("remaining args should be [doctor], got %v", remaining)
+	}
+}
+
+// Test parseGlobalFlags with multiple flags
+func TestParseGlobalFlagsMultiple(t *testing.T) {
+	origQuiet := quietMode
+	origDebug := debugMode
+	defer func() {
+		quietMode = origQuiet
+		debugMode = origDebug
+	}()
+
+	quietMode = false
+	debugMode = false
+	remaining := parseGlobalFlags([]string{"-q", "--debug", "slots", "--json"})
+
+	if !quietMode {
+		t.Error("parseGlobalFlags should set quietMode")
+	}
+	if !debugMode {
+		t.Error("parseGlobalFlags should set debugMode")
+	}
+	if len(remaining) != 2 || remaining[0] != "slots" || remaining[1] != "--json" {
+		t.Errorf("remaining args should be [slots --json], got %v", remaining)
+	}
+}
+
+// Test parseGlobalFlags preserves non-flag args
+func TestParseGlobalFlagsPreservesArgs(t *testing.T) {
+	origQuiet := quietMode
+	origDebug := debugMode
+	defer func() {
+		quietMode = origQuiet
+		debugMode = origDebug
+	}()
+
+	quietMode = false
+	debugMode = false
+	remaining := parseGlobalFlags([]string{"push", "myslot"})
+
+	if quietMode {
+		t.Error("quietMode should be false")
+	}
+	if debugMode {
+		t.Error("debugMode should be false")
+	}
+	if len(remaining) != 2 || remaining[0] != "push" || remaining[1] != "myslot" {
+		t.Errorf("remaining args should be [push myslot], got %v", remaining)
+	}
+}
+
+// Test run with global flags
+func TestRunWithGlobalFlags(t *testing.T) {
+	origQuiet := quietMode
+	origDebug := debugMode
+	defer func() {
+		quietMode = origQuiet
+		debugMode = origDebug
+	}()
+
+	noStdin := func() bool { return false }
+
+	// Test -q with version
+	quietMode = false
+	code := run([]string{"-q", "version"}, noStdin)
+	if code != 0 {
+		t.Errorf("run(-q version) = %d, want 0", code)
+	}
+	if !quietMode {
+		t.Error("quietMode should be set after run")
+	}
+}
+
+// Test run with --debug flag
+func TestRunWithDebugFlag(t *testing.T) {
+	origDebug := debugMode
+	defer func() { debugMode = origDebug }()
+
+	noStdin := func() bool { return false }
+
+	debugMode = false
+	code := run([]string{"--debug", "backend"}, noStdin)
+	if code != 0 {
+		t.Errorf("run(--debug backend) = %d, want 0", code)
+	}
+	if !debugMode {
+		t.Error("debugMode should be set after run")
+	}
+}
+
+// Test run with unknown command shows colored error when color enabled
+func TestRunUnknownCommandError(t *testing.T) {
+	origNoColor := os.Getenv("NO_COLOR")
+	defer restoreEnv("NO_COLOR", origNoColor)
+
+	_ = os.Setenv("NO_COLOR", "1") // Disable color for predictable output
+
+	noStdin := func() bool { return false }
+	code := run([]string{"nonexistent-cmd"}, noStdin)
+	if code != 1 {
+		t.Errorf("run(nonexistent-cmd) = %d, want 1", code)
+	}
+}
