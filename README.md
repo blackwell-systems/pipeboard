@@ -18,7 +18,7 @@
 
 **The programmable clipboard router for terminals.**
 
-One command across macOS, Linux, Windows, and WSL. Sync between machines via SSH. Store snippets in S3. Transform clipboard contents with user-defined pipelines.
+One command across macOS, Linux, Windows, and WSL. Sync between machines via SSH or store in S3. Transform clipboard contents with user-defined pipelines. All with client-side encryption and zero telemetry.
 
 ## Why pipeboard?
 
@@ -30,14 +30,20 @@ Terminal users copy and paste hundreds of times a day—config snippets, JSON pa
 | Send clipboard to another machine | SSH, scp, or paste into Slack | `pipeboard send dev` |
 | Grab that config you saved yesterday | Scroll through chat history | `pipeboard pull kube` |
 | Format JSON before pasting | Copy → browser → formatter → copy | `pipeboard fx pretty-json` |
-| Redact secrets before sharing | Manual find-and-replace | `pipeboard fx redact-secrets` |
+| Recall what you copied an hour ago | Hope it's still there | `pipeboard recall 1` |
 
-## Four Pillars
+## Core Features
 
-1. **Unified clipboard** — One CLI, every platform (macOS, Linux, Windows, WSL)
-2. **SSH peer sync** — Direct machine-to-machine transfer, no cloud required
-3. **S3 remote slots** — Named, persistent storage for async workflows
-4. **Programmable transforms** — User-defined pipelines to process clipboard in-place
+| Feature | Description |
+|---------|-------------|
+| **Unified clipboard** | One CLI across macOS, Linux, Windows, and WSL |
+| **Peer-to-peer sync** | Direct SSH transfer between machines—no cloud required |
+| **Named slots** | Persistent storage locally or in S3 for async workflows |
+| **Transforms** | User-defined pipelines to process clipboard in-place |
+| **History & recall** | Search and restore previous clipboard contents |
+| **Watch mode** | Real-time bidirectional sync with a peer |
+| **Encryption** | AES-256-GCM client-side encryption for stored content |
+| **Zero telemetry** | No tracking, no logging of clipboard contents |
 
 ## Quick Start
 
@@ -46,23 +52,30 @@ Terminal users copy and paste hundreds of times a day—config snippets, JSON pa
 brew install blackwell-systems/homebrew-tap/pipeboard
 # or: go install github.com/blackwell-systems/pipeboard@latest
 
-# Copy and paste
-echo "hello" | pipeboard
+# Copy and paste (works everywhere)
+echo "hello" | pipeboard        # implicit copy from stdin
 pipeboard paste
 
-# Transform clipboard contents
-pipeboard fx pretty-json
+# Transform clipboard in-place
+pipeboard fx pretty-json        # format JSON
+pipeboard fx strip-ansi         # chain multiple transforms
 
-# Sync with another machine
-pipeboard send dev
-pipeboard recv mac
+# Sync with another machine (via SSH)
+pipeboard send dev              # push to peer
+pipeboard recv mac              # pull from peer
+pipeboard watch dev             # real-time bidirectional sync
 
-# Store in S3 for later
-pipeboard push kube
-pipeboard pull kube
+# Store for later (local or S3)
+pipeboard push myconfig         # save to named slot
+pipeboard pull myconfig         # restore from slot
+pipeboard slots                 # list all slots
+
+# Clipboard history
+pipeboard history --local       # view recent copies
+pipeboard recall 1              # restore previous entry
 ```
 
-See [Getting Started](docs/getting-started.md) for all installation methods.
+See [Getting Started](docs/getting-started.md) for installation options.
 
 ## Platform Support
 
