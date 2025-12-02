@@ -251,8 +251,10 @@ func TestCmdCopyImageWithTextArgsError(t *testing.T) {
 	if err == nil {
 		t.Error("cmdCopy --image with text args should return error")
 	}
-	if !strings.Contains(err.Error(), "PNG data from stdin") {
-		t.Errorf("error should mention PNG and stdin: %v", err)
+	// Either "not supported" (no image backend) or "PNG data from stdin" (has backend but rejects text args)
+	if !strings.Contains(err.Error(), "PNG data from stdin") &&
+		!strings.Contains(err.Error(), "not supported") {
+		t.Errorf("error should mention PNG/stdin or not supported: %v", err)
 	}
 }
 
