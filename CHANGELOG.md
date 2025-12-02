@@ -24,9 +24,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Tests with various data sizes (empty, small, medium, large)
 
 ### Changed
-- Test coverage increased to 490 tests (up from 471)
+- Test coverage increased to 519 tests (up from 471)
 - Improved watch.go test coverage with tests for `readRemoteClipboard()` and `sendToRemote()`
 - Improved clipboard.go test coverage with 14 new tests for core clipboard functions
+- Improved history.go test coverage with 29 new tests for error paths and edge cases:
+  - Helper functions: `truncateString()`, `isSlotCommand()`, `isPeerCommand()`
+  - `getClipboardHistoryLimit()` with custom/zero/negative limits
+  - Encryption with preview handling and decryption paths
+  - Search on encrypted content
+  - JSON marshaling error paths
+  - Invalid input validation (negative index, multiple args)
+  - Multiple filter combinations
 - Added Testing page to documentation navigation
 
 ## [0.7.1] - 2025-12-01
