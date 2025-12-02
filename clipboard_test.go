@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"os"
 	"strings"
 	"testing"
@@ -152,7 +153,7 @@ func TestCmdPasteBasic(t *testing.T) {
 		}
 	}
 
-	var buf strings.Builder
+	var buf bytes.Buffer
 	_, _ = buf.ReadFrom(r)
 	// Output is whatever was in clipboard (may be empty)
 }
@@ -270,7 +271,7 @@ func TestCmdPasteImageMode(t *testing.T) {
 		}
 	}
 
-	var buf strings.Builder
+	var buf bytes.Buffer
 	_, _ = buf.ReadFrom(r)
 	// Image data would be in output (if supported)
 }
