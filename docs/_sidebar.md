@@ -11,6 +11,7 @@
   - [Sync & Remote](sync.md)
 
 - **Reference**
+  - [Architecture](architecture.md)
   - [Configuration](configuration.md)
   - [Platform Support](platforms.md)
 

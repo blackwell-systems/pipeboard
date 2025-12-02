@@ -98,6 +98,7 @@ Run `pipeboard doctor` to check your setup.
 - [Configuration](docs/configuration.md) — Config file reference
 - [Sync & Remote](docs/sync.md) — SSH peers and S3 slots
 - [Platforms](docs/platforms.md) — Platform-specific details
+- [Architecture](docs/architecture.md) — System design and component overview
 
 ## Security
 
