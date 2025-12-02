@@ -1,0 +1,28 @@
+#!/usr/bin/make -f
+
+export DH_VERBOSE = 1
+export GOCACHE = $(shell mktemp -d /tmp/gocache-XXXXXX)
+export GOFLAGS = -buildvcs=false -mod=readonly
+
+# Get version from git tag or debian/changelog
+VERSION := $(shell git describe --tags --always 2>/dev/null || dpkg-parsechangelog -S Version | cut -d- -f1)
+
+%:
+	dh $@ --buildsystem=golang --with=golang
+
+override_dh_auto_build:
+	go build -ldflags="-w -s -X main.version=$(VERSION)" -o pipeboard
+
+override_dh_auto_install:
+	install -D -m 0755 pipeboard debian/pipeboard/usr/bin/pipeboard
+	install -D -m 0644 man/man1/pipeboard.1 debian/pipeboard/usr/share/man/man1/pipeboard.1
+	install -D -m 0644 LICENSE debian/pipeboard/usr/share/doc/pipeboard/LICENSE
+	install -D -m 0644 README.md debian/pipeboard/usr/share/doc/pipeboard/README.md
+
+override_dh_auto_test:
+	# Skip tests during package build to speed up compilation
+	# Tests are run in CI/CD pipeline before release
+
+override_dh_auto_clean:
+	rm -f pipeboard
+	dh_auto_clean
