@@ -16,7 +16,9 @@ func TestReadClipboard(t *testing.T) {
 		// Just verify the error is reasonable
 		if !strings.Contains(err.Error(), "reading clipboard") &&
 			!strings.Contains(err.Error(), "missing") &&
-			!strings.Contains(err.Error(), "not found") {
+			!strings.Contains(err.Error(), "not found") &&
+			!strings.Contains(err.Error(), "no paste command") &&
+			!strings.Contains(err.Error(), "no command configured") {
 			t.Errorf("unexpected error from readClipboard: %v", err)
 		}
 		return
@@ -34,7 +36,8 @@ func TestWriteClipboardEmpty(t *testing.T) {
 		// Error is expected on some test environments without clipboard
 		// Just verify the error is reasonable
 		if !strings.Contains(err.Error(), "missing") &&
-			!strings.Contains(err.Error(), "not found") {
+			!strings.Contains(err.Error(), "not found") &&
+			!strings.Contains(err.Error(), "no command configured") {
 			t.Errorf("unexpected error from writeClipboard: %v", err)
 		}
 	}
@@ -48,7 +51,8 @@ func TestWriteClipboardWithData(t *testing.T) {
 		// Error is expected on some test environments without clipboard
 		// Just verify the error is reasonable
 		if !strings.Contains(err.Error(), "missing") &&
-			!strings.Contains(err.Error(), "not found") {
+			!strings.Contains(err.Error(), "not found") &&
+			!strings.Contains(err.Error(), "no command configured") {
 			t.Errorf("unexpected error from writeClipboard: %v", err)
 		}
 	}
@@ -66,7 +70,8 @@ func TestWriteClipboardLargeData(t *testing.T) {
 		// Error is expected on some test environments without clipboard
 		// Just verify the error is reasonable
 		if !strings.Contains(err.Error(), "missing") &&
-			!strings.Contains(err.Error(), "not found") {
+			!strings.Contains(err.Error(), "not found") &&
+			!strings.Contains(err.Error(), "no command configured") {
 			t.Errorf("unexpected error from writeClipboard: %v", err)
 		}
 	}
@@ -80,7 +85,8 @@ func TestCmdClearFallback(t *testing.T) {
 	if err != nil {
 		// Error is expected on some test environments
 		if !strings.Contains(err.Error(), "missing") &&
-			!strings.Contains(err.Error(), "not found") {
+			!strings.Contains(err.Error(), "not found") &&
+			!strings.Contains(err.Error(), "no command configured") {
 			t.Errorf("unexpected error from cmdClear: %v", err)
 		}
 	}
