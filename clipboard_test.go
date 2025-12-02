@@ -97,7 +97,7 @@ func TestCmdBackendWithNotes(t *testing.T) {
 	_ = w.Close()
 	os.Stdout = oldStdout
 
-	var buf strings.Builder
+	var buf bytes.Buffer
 	_, _ = buf.ReadFrom(r)
 	output := buf.String()
 
@@ -173,7 +173,7 @@ func TestCmdDoctorComprehensive(t *testing.T) {
 		t.Fatalf("cmdDoctor should not error: %v", err)
 	}
 
-	var buf strings.Builder
+	var buf bytes.Buffer
 	_, _ = buf.ReadFrom(r)
 	output := buf.String()
 
