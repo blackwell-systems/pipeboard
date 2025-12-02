@@ -1172,6 +1172,8 @@ func TestGetClipboardHistoryLimitCustom(t *testing.T) {
 	tmpDir := t.TempDir()
 	configFile := tmpDir + "/config.yaml"
 	configContent := `version: 1
+sync:
+  backend: local
 history:
   limit: 50
 `
