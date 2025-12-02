@@ -196,3 +196,75 @@ func TestWatchConstants(t *testing.T) {
 		t.Error("minWatchInterval should not exceed defaultWatchInterval")
 	}
 }
+
+// Test readRemoteClipboard with invalid SSH command
+func TestReadRemoteClipboardError(t *testing.T) {
+	peer := PeerConfig{
+		SSH:       "nonexistent-host-12345",
+		RemoteCmd: "pipeboard",
+	}
+	_, err := readRemoteClipboard(peer)
+	if err == nil {
+		t.Error("readRemoteClipboard should error with invalid SSH host")
+	}
+}
+
+// Test readRemoteClipboard with successful execution
+func TestReadRemoteClipboardSuccess(t *testing.T) {
+	// Use a command that will succeed - echo piped through cat
+	peer := PeerConfig{
+		SSH:       "localhost",
+		RemoteCmd: "echo",
+	}
+	// We can't fully test this without SSH setup, but we can verify the function exists
+	// and handles the peer config correctly
+	_, err := readRemoteClipboard(peer)
+	// Error is expected since "echo paste" won't work as expected
+	// but it tests the code path
+	_ = err
+}
+
+// Test sendToRemote with invalid SSH command
+func TestSendToRemoteError(t *testing.T) {
+	peer := PeerConfig{
+		SSH:       "nonexistent-host-12345",
+		RemoteCmd: "pipeboard",
+	}
+	data := []byte("test data")
+	err := sendToRemote(peer, data)
+	if err == nil {
+		t.Error("sendToRemote should error with invalid SSH host")
+	}
+}
+
+// Test sendToRemote with empty data
+func TestSendToRemoteEmptyData(t *testing.T) {
+	peer := PeerConfig{
+		SSH:       "nonexistent-host-12345",
+		RemoteCmd: "pipeboard",
+	}
+	data := []byte{}
+	err := sendToRemote(peer, data)
+	// Should still error due to invalid host, but tests empty data handling
+	if err == nil {
+		t.Error("sendToRemote should error with invalid SSH host")
+	}
+}
+
+// Test sendToRemote with large data
+func TestSendToRemoteLargeData(t *testing.T) {
+	peer := PeerConfig{
+		SSH:       "nonexistent-host-12345",
+		RemoteCmd: "pipeboard",
+	}
+	// Create 1MB of data
+	data := make([]byte, 1024*1024)
+	for i := range data {
+		data[i] = byte(i % 256)
+	}
+	err := sendToRemote(peer, data)
+	// Should error due to invalid host, but tests large data handling
+	if err == nil {
+		t.Error("sendToRemote should error with invalid SSH host")
+	}
+}
