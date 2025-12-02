@@ -17,10 +17,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Integration test architecture diagrams
   - Troubleshooting and manual testing guides
 - **Scripts directory** - New `scripts/` directory for integration test scripts
+- **Clipboard test suite** - New `clipboard_test.go` with comprehensive coverage for clipboard operations
+  - Tests for `readClipboard()` and `writeClipboard()` functions
+  - Tests for cmdClear fallback path, cmdBackend Notes output
+  - Tests for image mode error handling
+  - Tests with various data sizes (empty, small, medium, large)
 
 ### Changed
-- Test coverage increased to 476 tests (up from 471)
+- Test coverage increased to 490 tests (up from 471)
 - Improved watch.go test coverage with tests for `readRemoteClipboard()` and `sendToRemote()`
+- Improved clipboard.go test coverage with 14 new tests for core clipboard functions
 - Added Testing page to documentation navigation
 
 ## [0.7.1] - 2025-12-01
