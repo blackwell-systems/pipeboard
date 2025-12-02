@@ -7,6 +7,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **SSH peer integration test** - Automated Docker-based test infrastructure in `scripts/test-ssh-peer.sh`
+  - Tests bidirectional clipboard sync over SSH using Alpine containers
+  - Includes xclip wrapper for headless clipboard access via Xvfb
+  - 3 test scenarios: basic transfer, multiline content, bidirectional sync
+- **Testing documentation** - Comprehensive guide in `docs/testing.md`
+  - Unit test instructions and examples
+  - Integration test architecture diagrams
+  - Troubleshooting and manual testing guides
+- **Scripts directory** - New `scripts/` directory for integration test scripts
+- **Clipboard test suite** - New `clipboard_test.go` with comprehensive coverage for clipboard operations
+  - Tests for `readClipboard()` and `writeClipboard()` functions
+  - Tests for cmdClear fallback path, cmdBackend Notes output
+  - Tests for image mode error handling
+  - Tests with various data sizes (empty, small, medium, large)
+
+### Changed
+- Test coverage increased to 500+ tests (400 test functions, up from 471 test runs)
+- Improved watch.go test coverage with tests for `readRemoteClipboard()` and `sendToRemote()`
+- Improved clipboard.go test coverage with 14 new tests for core clipboard functions
+- Improved history.go test coverage with 29 new tests for error paths and edge cases:
+  - Helper functions: `truncateString()`, `isSlotCommand()`, `isPeerCommand()`
+  - `getClipboardHistoryLimit()` with custom/zero/negative limits
+  - Encryption with preview handling and decryption paths
+  - Search on encrypted content
+  - JSON marshaling error paths
+  - Invalid input validation (negative index, multiple args)
+  - Multiple filter combinations
+- Added Testing page to documentation navigation
+
 ## [0.7.1] - 2025-12-01
 
 ### Changed

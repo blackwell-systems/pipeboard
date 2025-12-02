@@ -1701,21 +1701,6 @@ func TestPrintHelpNoPanic(t *testing.T) {
 	printHelp()
 }
 
-// Test cmdHistory with no history file
-func TestCmdHistoryNoFile(t *testing.T) {
-	tmpDir := t.TempDir()
-
-	origHome := os.Getenv("HOME")
-	defer restoreEnv("HOME", origHome)
-	_ = os.Setenv("HOME", tmpDir)
-
-	// Should not error, just show empty
-	err := cmdHistory([]string{})
-	if err != nil {
-		t.Errorf("cmdHistory should handle missing file: %v", err)
-	}
-}
-
 // Test loadConfig with invalid YAML
 func TestLoadConfigInvalidYAML(t *testing.T) {
 	tmpDir := t.TempDir()
@@ -2451,14 +2436,6 @@ func TestCmdRecallZeroIndex(t *testing.T) {
 	err := cmdRecall([]string{"0"})
 	if err == nil {
 		t.Error("cmdRecall with index 0 should return error")
-	}
-}
-
-// Test cmdRecall with negative index
-func TestCmdRecallNegativeIndex(t *testing.T) {
-	err := cmdRecall([]string{"-1"})
-	if err == nil {
-		t.Error("cmdRecall with negative index should return error")
 	}
 }
 

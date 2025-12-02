@@ -11,9 +11,10 @@
 [![Dependabot](https://img.shields.io/badge/Dependabot-enabled-brightgreen?logo=dependabot)](https://github.com/blackwell-systems/pipeboard/security/dependabot)
 [![Release](https://img.shields.io/github/v/release/blackwell-systems/pipeboard)](https://github.com/blackwell-systems/pipeboard/releases)
 
-[![Tests](https://img.shields.io/badge/tests-471-success)](https://github.com/blackwell-systems/pipeboard)
+[![Tests](https://img.shields.io/badge/tests-500-success)](https://github.com/blackwell-systems/pipeboard)
 [![codecov](https://codecov.io/gh/blackwell-systems/pipeboard/branch/main/graph/badge.svg)](https://codecov.io/gh/blackwell-systems/pipeboard)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](https://github.com/blackwell-systems/pipeboard/issues)
+[![Sponsor](https://img.shields.io/badge/Sponsor-Buy%20Me%20a%20Coffee-yellow?logo=buy-me-a-coffee&logoColor=white)](https://buymeacoffee.com/blackwellsystems)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 
 **The programmable clipboard router for terminals.**
@@ -97,6 +98,7 @@ Run `pipeboard doctor` to check your setup.
 - [Configuration](docs/configuration.md) — Config file reference
 - [Sync & Remote](docs/sync.md) — SSH peers and S3 slots
 - [Platforms](docs/platforms.md) — Platform-specific details
+- [Architecture](docs/architecture.md) — System design and component overview
 
 ## Security
 

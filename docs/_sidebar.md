@@ -11,8 +11,10 @@
   - [Sync & Remote](sync.md)
 
 - **Reference**
+  - [Architecture](architecture.md)
   - [Configuration](configuration.md)
   - [Platform Support](platforms.md)
+  - [Testing](testing.md)
 
 - **Project**
   - [Changelog](https://github.com/blackwell-systems/pipeboard/blob/main/CHANGELOG.md)
