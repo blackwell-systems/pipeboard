@@ -1,0 +1,27 @@
+Source: pipeboard
+Section: utils
+Priority: optional
+Maintainer: Blackwell Systems <blackwellsystems@protonmail.com>
+Build-Depends: debhelper-compat (= 13), golang-go (>= 1.21)
+Standards-Version: 4.6.2
+Homepage: https://github.com/blackwell-systems/pipeboard
+Vcs-Git: https://github.com/blackwell-systems/pipeboard.git
+Vcs-Browser: https://github.com/blackwell-systems/pipeboard
+Rules-Requires-Root: no
+
+Package: pipeboard
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Recommends: xclip | xsel | wl-clipboard
+Description: Cross-platform clipboard CLI with SSH + S3 sync
+ Pipeboard is a command-line tool for managing clipboard operations with
+ advanced features including:
+  * Copy and paste text to/from clipboard
+  * SSH peer-to-peer clipboard synchronization
+  * S3 backend for remote clipboard storage
+  * Clipboard history with search and recall
+  * Image clipboard support (PNG)
+  * Transform clipboard content with custom commands
+  * Slot-based clipboard management
+ .
+ Pipeboard works seamlessly across Linux (X11/Wayland), macOS, and Windows.
