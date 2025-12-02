@@ -1,6 +1,6 @@
 # Maintainer: Blackwell Systems <blackwellsystems@protonmail.com>
 pkgname=pipeboard
-pkgver=0.6.0
+pkgver=0.7.2
 pkgrel=1
 pkgdesc="Cross-platform clipboard CLI with SSH + S3 sync and programmable transforms"
 arch=('x86_64' 'aarch64')
