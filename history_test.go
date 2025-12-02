@@ -1158,24 +1158,18 @@ func TestIsPeerCommandNonPeerCommands(t *testing.T) {
 // Test getClipboardHistoryLimit with custom limit in config
 func TestGetClipboardHistoryLimitCustom(t *testing.T) {
 	tmpDir := t.TempDir()
-	origXDG := os.Getenv("XDG_CONFIG_HOME")
-	defer func() {
-		if origXDG != "" {
-			_ = os.Setenv("XDG_CONFIG_HOME", origXDG)
-		} else {
-			_ = os.Unsetenv("XDG_CONFIG_HOME")
-		}
-	}()
-	_ = os.Setenv("XDG_CONFIG_HOME", tmpDir)
-
-	// Create config with custom history limit
-	configDir := tmpDir + "/pipeboard"
-	_ = os.MkdirAll(configDir, 0755)
+	configFile := tmpDir + "/config.yaml"
 	configContent := `version: 1
 history:
   limit: 50
 `
-	_ = os.WriteFile(configDir+"/config.yaml", []byte(configContent), 0600)
+	if err := os.WriteFile(configFile, []byte(configContent), 0600); err != nil {
+		t.Fatalf("failed to write config: %v", err)
+	}
+
+	origConfig := os.Getenv("PIPEBOARD_CONFIG")
+	defer restoreEnv("PIPEBOARD_CONFIG", origConfig)
+	_ = os.Setenv("PIPEBOARD_CONFIG", configFile)
 
 	limit := getClipboardHistoryLimit()
 	if limit != 50 {
@@ -1444,7 +1438,9 @@ sync:
 	// Recall should decrypt and restore (may fail on writeClipboard in test env)
 	err := cmdRecall([]string{"1"})
 	// Error from writeClipboard is acceptable in test environment
-	if err != nil && !strings.Contains(err.Error(), "missing") && !strings.Contains(err.Error(), "not found") {
+	if err != nil && !strings.Contains(err.Error(), "missing") &&
+		!strings.Contains(err.Error(), "not found") &&
+		!strings.Contains(err.Error(), "no command configured") {
 		t.Errorf("cmdRecall unexpected error: %v", err)
 	}
 }
