@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **SSH peer integration test** - Automated Docker-based test infrastructure in `scripts/test-ssh-peer.sh`
+  - Tests bidirectional clipboard sync over SSH using Alpine containers
+  - Includes xclip wrapper for headless clipboard access via Xvfb
+  - 3 test scenarios: basic transfer, multiline content, bidirectional sync
+- **Testing documentation** - Comprehensive guide in `docs/testing.md`
+  - Unit test instructions and examples
+  - Integration test architecture diagrams
+  - Troubleshooting and manual testing guides
+- **Scripts directory** - New `scripts/` directory for integration test scripts
+
+### Changed
+- Test coverage increased to 476 tests (up from 471)
+- Improved watch.go test coverage with tests for `readRemoteClipboard()` and `sendToRemote()`
+- Added Testing page to documentation navigation
+
 ## [0.7.1] - 2025-12-01
 
 ### Changed
