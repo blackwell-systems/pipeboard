@@ -1157,6 +1157,18 @@ func TestIsPeerCommandNonPeerCommands(t *testing.T) {
 
 // Test getClipboardHistoryLimit with custom limit in config
 func TestGetClipboardHistoryLimitCustom(t *testing.T) {
+	// Clean state - unset any existing config env vars
+	origConfig := os.Getenv("PIPEBOARD_CONFIG")
+	origXDG := os.Getenv("XDG_CONFIG_HOME")
+	defer func() {
+		restoreEnv("PIPEBOARD_CONFIG", origConfig)
+		restoreEnv("XDG_CONFIG_HOME", origXDG)
+	}()
+
+	// Ensure clean start
+	_ = os.Unsetenv("PIPEBOARD_CONFIG")
+	_ = os.Unsetenv("XDG_CONFIG_HOME")
+
 	tmpDir := t.TempDir()
 	configFile := tmpDir + "/config.yaml"
 	configContent := `version: 1
@@ -1167,8 +1179,6 @@ history:
 		t.Fatalf("failed to write config: %v", err)
 	}
 
-	origConfig := os.Getenv("PIPEBOARD_CONFIG")
-	defer restoreEnv("PIPEBOARD_CONFIG", origConfig)
 	_ = os.Setenv("PIPEBOARD_CONFIG", configFile)
 
 	limit := getClipboardHistoryLimit()
