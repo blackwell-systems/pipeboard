@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- **Local clipboard history now records entries** - `pipeboard copy` now properly saves to local history
+  - Bug fix: `recordClipboardHistory()` was implemented but never called from `cmdCopy()`
+  - `pipeboard history --local` now shows clipboard history as documented
+  - History tracking includes encryption, TTL, and deduplication features that were previously untested in production
+
 ### Changed
 - **Crypto test coverage expanded** - Added 6 new edge case tests to crypto_test.go
   - TestEncryptVeryLongPassphrase: tests 1KB passphrases

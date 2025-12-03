@@ -51,7 +51,15 @@ func cmdCopy(args []string) error {
 	if err != nil {
 		return err
 	}
-	return runWithInput(b.CopyCmd, data)
+
+	// Copy to clipboard
+	if err := runWithInput(b.CopyCmd, data); err != nil {
+		return err
+	}
+
+	// Record to local history
+	recordClipboardHistory(data)
+	return nil
 }
 
 func cmdPaste(args []string) error {
