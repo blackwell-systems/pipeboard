@@ -3,7 +3,9 @@ package main
 import (
 	"encoding/base64"
 	"encoding/json"
+	"fmt"
 	"os"
+	"strings"
 	"testing"
 	"time"
 )
@@ -460,5 +462,263 @@ func TestSlotPayloadWithCompression(t *testing.T) {
 
 	if !decoded.Compressed {
 		t.Error("expected decoded Compressed to be true")
+	}
+}
+
+func TestNewS3BackendEncryptionNoPassphrase(t *testing.T) {
+	// Test that encryption requires a passphrase
+	cfg := &S3Config{
+		Bucket: "test-bucket",
+		Region: "us-east-1",
+	}
+
+	_, err := newS3Backend(cfg, "aes256", "", 0)
+	if err == nil {
+		t.Error("expected error when encryption is set but passphrase is empty")
+	}
+	if err != nil && !strings.Contains(err.Error(), "passphrase required") {
+		t.Errorf("expected 'passphrase required' error, got: %v", err)
+	}
+}
+
+func TestRetryWithBackoffNoSuchKeyError(t *testing.T) {
+	// NoSuchKey errors should not retry
+	attempts := 0
+	err := retryWithBackoff(3, func() error {
+		attempts++
+		return fmt.Errorf("NoSuchKey: the specified key does not exist")
+	})
+
+	if err == nil {
+		t.Error("expected error")
+	}
+	if attempts != 1 {
+		t.Errorf("expected 1 attempt for NoSuchKey error (no retry), got %d", attempts)
+	}
+}
+
+func TestRetryWithBackoffAccessDeniedError(t *testing.T) {
+	// AccessDenied errors should not retry
+	attempts := 0
+	err := retryWithBackoff(3, func() error {
+		attempts++
+		return fmt.Errorf("AccessDenied: access to the resource is denied")
+	})
+
+	if err == nil {
+		t.Error("expected error")
+	}
+	if attempts != 1 {
+		t.Errorf("expected 1 attempt for AccessDenied error (no retry), got %d", attempts)
+	}
+}
+
+func TestRetryWithBackoffInvalidAccessKeyIdError(t *testing.T) {
+	// InvalidAccessKeyId errors should not retry
+	attempts := 0
+	err := retryWithBackoff(3, func() error {
+		attempts++
+		return fmt.Errorf("InvalidAccessKeyId: the AWS access key ID does not exist")
+	})
+
+	if err == nil {
+		t.Error("expected error")
+	}
+	if attempts != 1 {
+		t.Errorf("expected 1 attempt for InvalidAccessKeyId error (no retry), got %d", attempts)
+	}
+}
+
+func TestSlotPayloadWithExpiresAt(t *testing.T) {
+	data := []byte("expiring data")
+	expiresAt := time.Now().UTC().AddDate(0, 0, 30).Format(time.RFC3339)
+
+	payload := SlotPayload{
+		Version:   1,
+		CreatedAt: time.Now().UTC().Format(time.RFC3339),
+		ExpiresAt: expiresAt,
+		Hostname:  "test-host",
+		OS:        "linux",
+		Len:       len(data),
+		MIME:      "text/plain; charset=utf-8",
+		DataB64:   base64.StdEncoding.EncodeToString(data),
+	}
+
+	// Verify JSON encoding preserves expires_at
+	jsonData, err := json.Marshal(payload)
+	if err != nil {
+		t.Fatalf("failed to marshal: %v", err)
+	}
+
+	var decoded SlotPayload
+	if err := json.Unmarshal(jsonData, &decoded); err != nil {
+		t.Fatalf("failed to unmarshal: %v", err)
+	}
+
+	if decoded.ExpiresAt != expiresAt {
+		t.Errorf("expected ExpiresAt %s, got %s", expiresAt, decoded.ExpiresAt)
+	}
+}
+
+func TestSlotPayloadEmptyExpiresAt(t *testing.T) {
+	// When ExpiresAt is empty, it should be omitted from JSON
+	payload := SlotPayload{
+		Version:   1,
+		CreatedAt: time.Now().UTC().Format(time.RFC3339),
+		ExpiresAt: "", // Empty means no expiry
+		Hostname:  "test-host",
+		OS:        "linux",
+		Len:       5,
+		MIME:      "text/plain",
+		DataB64:   base64.StdEncoding.EncodeToString([]byte("hello")),
+	}
+
+	jsonData, err := json.Marshal(payload)
+	if err != nil {
+		t.Fatalf("failed to marshal: %v", err)
+	}
+
+	// expires_at should be omitted when empty
+	if strings.Contains(string(jsonData), `"expires_at":""`) {
+		t.Error("empty expires_at should be omitted from JSON")
+	}
+}
+
+func TestNewRemoteBackendFromConfigLocalBackend(t *testing.T) {
+	tmpDir := t.TempDir()
+	configFile := tmpDir + "/config.yaml"
+
+	// Config with local backend
+	configContent := `version: 1
+sync:
+  backend: local
+`
+	if err := os.WriteFile(configFile, []byte(configContent), 0644); err != nil {
+		t.Fatalf("failed to write config: %v", err)
+	}
+
+	origConfig := os.Getenv("PIPEBOARD_CONFIG")
+	defer restoreEnv("PIPEBOARD_CONFIG", origConfig)
+
+	_ = os.Setenv("PIPEBOARD_CONFIG", configFile)
+
+	backend, err := newRemoteBackendFromConfig()
+	if err != nil {
+		t.Fatalf("unexpected error for local backend: %v", err)
+	}
+	if backend == nil {
+		t.Error("expected backend to be non-nil")
+	}
+}
+
+func TestS3BackendKeyWithTrailingSlash(t *testing.T) {
+	backend := &S3Backend{
+		bucket: "test-bucket",
+		prefix: "user/slots", // No trailing slash
+	}
+
+	key := backend.key("myslot")
+	// path.Join handles this correctly
+	if key != "user/slots/myslot.pb" {
+		t.Errorf("expected key user/slots/myslot.pb, got %s", key)
+	}
+}
+
+func TestRetryWithBackoffAllRetriesFail(t *testing.T) {
+	attempts := 0
+	err := retryWithBackoff(2, func() error {
+		attempts++
+		return fmt.Errorf("transient network error")
+	})
+
+	if err == nil {
+		t.Error("expected error after all retries exhausted")
+	}
+	if attempts != 2 {
+		t.Errorf("expected 2 attempts, got %d", attempts)
+	}
+	if !strings.Contains(err.Error(), "operation failed after 2 retries") {
+		t.Errorf("expected retry error message, got: %v", err)
+	}
+}
+
+func TestDetectMIMEBinaryData(t *testing.T) {
+	// Test various binary formats
+	tests := []struct {
+		name     string
+		data     []byte
+		expected string
+	}{
+		{"PDF header", []byte("%PDF-1.4"), "application/pdf"},
+		{"GIF header", []byte("GIF89a"), "image/gif"},
+		{"ZIP header", []byte{0x50, 0x4B, 0x03, 0x04}, "application/zip"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mime := detectMIME(tt.data)
+			if !strings.HasPrefix(mime, tt.expected) {
+				t.Errorf("detectMIME() = %q, want prefix %q", mime, tt.expected)
+			}
+		})
+	}
+}
+
+func TestCompressDataEmpty(t *testing.T) {
+	// Compressing empty data should work
+	compressed, err := compressData([]byte{})
+	if err != nil {
+		t.Fatalf("compressData on empty data failed: %v", err)
+	}
+
+	// Decompress should return empty
+	decompressed, err := decompressData(compressed)
+	if err != nil {
+		t.Fatalf("decompressData failed: %v", err)
+	}
+	if len(decompressed) != 0 {
+		t.Errorf("expected empty result, got %d bytes", len(decompressed))
+	}
+}
+
+func TestSlotPayloadAllFieldsSet(t *testing.T) {
+	// Test payload with all optional fields set
+	payload := SlotPayload{
+		Version:    1,
+		CreatedAt:  "2025-01-01T00:00:00Z",
+		ExpiresAt:  "2025-02-01T00:00:00Z",
+		Hostname:   "test-host",
+		OS:         "linux",
+		Len:        100,
+		MIME:       "application/json",
+		Encrypted:  true,
+		Compressed: true,
+		DataB64:    "dGVzdA==",
+	}
+
+	jsonData, err := json.Marshal(payload)
+	if err != nil {
+		t.Fatalf("failed to marshal: %v", err)
+	}
+
+	// Verify all fields are present
+	jsonStr := string(jsonData)
+	requiredFields := []string{
+		`"version":1`,
+		`"created_at":"2025-01-01T00:00:00Z"`,
+		`"expires_at":"2025-02-01T00:00:00Z"`,
+		`"hostname":"test-host"`,
+		`"os":"linux"`,
+		`"len":100`,
+		`"mime":"application/json"`,
+		`"encrypted":true`,
+		`"compressed":true`,
+		`"data_b64":"dGVzdA=="`,
+	}
+
+	for _, field := range requiredFields {
+		if !strings.Contains(jsonStr, field) {
+			t.Errorf("JSON missing field: %s", field)
+		}
 	}
 }

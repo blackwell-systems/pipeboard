@@ -778,3 +778,99 @@ func TestLocalBackendMIMEDetection(t *testing.T) {
 		})
 	}
 }
+
+// Test List filters out expired slots
+func TestLocalBackendListFiltersExpiredSlots(t *testing.T) {
+	tmpDir := t.TempDir()
+	cfg := &LocalConfig{Path: tmpDir}
+
+	backend, err := newLocalBackend(cfg, "", "", 0)
+	if err != nil {
+		t.Fatalf("failed to create local backend: %v", err)
+	}
+
+	// Create a valid slot (no expiry)
+	_ = backend.Push("valid", []byte("valid data"), nil)
+
+	// Create an expired slot manually
+	expiredPayload := `{"version":1,"created_at":"2020-01-01T00:00:00Z","expires_at":"2020-01-02T00:00:00Z","hostname":"test","os":"linux","len":4,"mime":"text/plain","data_b64":"dGVzdA=="}`
+	expiredFile := filepath.Join(tmpDir, "expired.pb")
+	if err := os.WriteFile(expiredFile, []byte(expiredPayload), 0600); err != nil {
+		t.Fatalf("failed to write expired slot: %v", err)
+	}
+
+	// List should only return the valid slot
+	slots, err := backend.List()
+	if err != nil {
+		t.Fatalf("List failed: %v", err)
+	}
+
+	if len(slots) != 1 {
+		t.Errorf("expected 1 slot (expired filtered out), got %d", len(slots))
+	}
+
+	if len(slots) > 0 && slots[0].Name != "valid" {
+		t.Errorf("expected slot 'valid', got %q", slots[0].Name)
+	}
+
+	// Expired slot should be auto-deleted
+	if _, err := os.Stat(expiredFile); !os.IsNotExist(err) {
+		t.Error("expired slot should be auto-deleted during List")
+	}
+}
+
+// Test List includes ExpiresAt for slots with TTL
+func TestLocalBackendListIncludesExpiresAt(t *testing.T) {
+	tmpDir := t.TempDir()
+	cfg := &LocalConfig{Path: tmpDir}
+
+	backend, err := newLocalBackend(cfg, "", "", 30) // 30 days TTL
+	if err != nil {
+		t.Fatalf("failed to create local backend: %v", err)
+	}
+
+	if err := backend.Push("withttl", []byte("data"), nil); err != nil {
+		t.Fatalf("Push failed: %v", err)
+	}
+
+	slots, err := backend.List()
+	if err != nil {
+		t.Fatalf("List failed: %v", err)
+	}
+
+	if len(slots) != 1 {
+		t.Fatalf("expected 1 slot, got %d", len(slots))
+	}
+
+	if slots[0].ExpiresAt.IsZero() {
+		t.Error("ExpiresAt should be set for slot with TTL")
+	}
+}
+
+// Test List with slot without TTL (ExpiresAt should be zero)
+func TestLocalBackendListNoExpiresAt(t *testing.T) {
+	tmpDir := t.TempDir()
+	cfg := &LocalConfig{Path: tmpDir}
+
+	backend, err := newLocalBackend(cfg, "", "", 0) // no TTL
+	if err != nil {
+		t.Fatalf("failed to create local backend: %v", err)
+	}
+
+	if err := backend.Push("nottl", []byte("data"), nil); err != nil {
+		t.Fatalf("Push failed: %v", err)
+	}
+
+	slots, err := backend.List()
+	if err != nil {
+		t.Fatalf("List failed: %v", err)
+	}
+
+	if len(slots) != 1 {
+		t.Fatalf("expected 1 slot, got %d", len(slots))
+	}
+
+	if !slots[0].ExpiresAt.IsZero() {
+		t.Error("ExpiresAt should be zero for slot without TTL")
+	}
+}
