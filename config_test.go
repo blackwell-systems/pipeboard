@@ -198,7 +198,7 @@ sync:
 peers:
   dev:
     ssh: devbox
-    remote_cmd: pb
+    remote_cmd: pipeboard
 `
 	if err := os.WriteFile(configFile, []byte(configContent), 0644); err != nil {
 		t.Fatalf("failed to write config file: %v", err)
@@ -238,8 +238,8 @@ peers:
 	if peer.SSH != "devbox" {
 		t.Errorf("expected SSH 'devbox', got %s", peer.SSH)
 	}
-	if peer.RemoteCmd != "pb" {
-		t.Errorf("expected RemoteCmd 'pb', got %s", peer.RemoteCmd)
+	if peer.RemoteCmd != "pipeboard" {
+		t.Errorf("expected RemoteCmd 'pipeboard', got %s", peer.RemoteCmd)
 	}
 }
 
