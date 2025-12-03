@@ -7,7 +7,7 @@ This page describes the high-level architecture and component interactions of th
 ```mermaid
 graph TB
     subgraph "User Interface"
-        CLI[pb CLI]
+        CLI[pipeboard CLI]
         SHELL[Shell Aliases]
     end
 
@@ -75,11 +75,11 @@ flowchart LR
 
 ### CLI Entry Point
 
-The `pb` command provides the main interface:
+The `pipeboard` command provides the main interface:
 
 ```mermaid
 graph LR
-    A[pb] --> B{Command}
+    A[pipeboard] --> B{Command}
     B --> C[copy]
     B --> D[paste]
     B --> E[slot]
@@ -137,23 +137,23 @@ Pipeboard supports multiple sync backends:
 ```mermaid
 sequenceDiagram
     participant User
-    participant CLI as pb CLI
+    participant CLI as pipeboard CLI
     participant Local as Local Slots
     participant Remote as Remote Backend
 
-    User->>CLI: pb copy
+    User->>CLI: pipeboard copy
     CLI->>Local: Save to slot
 
-    User->>CLI: pb sync push
+    User->>CLI: pipeboard push
     CLI->>Local: Read slot data
     CLI->>Remote: Upload (S3/SSH)
 
-    User->>CLI: pb sync pull (other machine)
+    User->>CLI: pipeboard pull (other machine)
     CLI->>Remote: Download data
     Remote-->>CLI: Return encrypted data
     CLI->>Local: Save to local slot
 
-    User->>CLI: pb paste
+    User->>CLI: pipeboard paste
     CLI->>Local: Read slot
     CLI-->>User: Output to clipboard
 ```
@@ -163,7 +163,7 @@ sequenceDiagram
 ```mermaid
 graph TB
     subgraph "Sync Options"
-        A[pb sync]
+        A[pipeboard sync]
     end
 
     subgraph "Backend Implementations"
@@ -220,21 +220,23 @@ graph LR
 
 ```
 pipeboard/
-├── cmd/                    # CLI commands
-│   └── pb/                 # Main entry point
-├── internal/               # Core implementation
-│   ├── clipboard/          # Clipboard abstraction layer
-│   ├── config/             # Configuration management
-│   ├── crypto/             # Encryption/decryption
-│   ├── history/            # History tracking
-│   ├── local/              # Local slot storage
-│   ├── peer/               # P2P synchronization
-│   ├── remote/             # Remote storage (S3)
-│   ├── ssh/                # SSH backend
-│   └── transform/          # Transform engine
-├── config/                 # User configuration
-│   └── config.yaml         # Main config file
-├── slots/                  # Local slot storage
+├── main.go                 # Main entry point
+├── cli.go                  # CLI interface and help text
+├── clipboard.go            # Clipboard operations (copy/paste)
+├── backend.go              # Platform clipboard detection
+├── config.go               # Configuration management
+├── crypto.go               # AES-256-GCM encryption
+├── history.go              # Command and clipboard history
+├── local.go                # Local filesystem backend
+├── remote.go               # S3 backend with compression
+├── peer.go                 # SSH peer sync
+├── watch.go                # Real-time bidirectional sync
+├── slots.go                # Remote slot management
+├── fx.go                   # Transform pipelines
+├── init.go                 # Interactive setup wizard
+├── completion.go           # Shell completions
+├── run.go                  # Subprocess execution
+├── *_test.go               # Test files
 └── docs/                   # Documentation
 ```
 
@@ -242,7 +244,7 @@ pipeboard/
 
 ```mermaid
 flowchart TD
-    A[pb Command] --> B[Load Config]
+    A[pipeboard Command] --> B[Load Config]
     B --> C[config.yaml]
 
     C --> D{Config Type}
@@ -327,38 +329,6 @@ flowchart TD
 
     D --> L[Return Error Message]
 ```
-
-## Key Design Decisions
-
-### 1. Slot-Based Storage
-Instead of a single clipboard history, pipeboard uses named "slots" for organized clipboard management. This allows:
-- Categorization (work vs personal)
-- Long-term storage
-- Easy retrieval by name
-
-### 2. Transform Pipeline
-Transforms are composable and can be chained. This enables:
-- Reusable data processing
-- Custom workflows
-- Plugin-like extensibility
-
-### 3. P2P Sync
-Direct machine-to-machine transfer via SSH reduces cloud dependencies:
-- No intermediary storage required
-- Lower latency
-- Privacy-focused
-
-### 4. Encryption by Default
-All stored data is encrypted before writing to disk or network:
-- AES-256 encryption
-- User-controlled keys
-- Zero-knowledge architecture
-
-### 5. Platform Abstraction
-Unified clipboard API regardless of OS:
-- Automatic platform detection
-- Graceful fallbacks
-- Consistent behavior across platforms
 
 ## Performance Characteristics
 
