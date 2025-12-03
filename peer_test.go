@@ -245,3 +245,90 @@ func TestPeerCommandsInvalidYAML(t *testing.T) {
 		})
 	}
 }
+
+// Test cmdSend with too many arguments
+func TestCmdSendTooManyArgsError(t *testing.T) {
+	cleanup := setupPeerTestConfig(t, `version: 1
+peers:
+  dev:
+    ssh: user@host
+`)
+	defer cleanup()
+
+	err := cmdSend([]string{"peer1", "peer2"})
+	if err == nil {
+		t.Error("cmdSend should error with too many args")
+	}
+	if !strings.Contains(err.Error(), "usage:") {
+		t.Errorf("error should show usage: %v", err)
+	}
+}
+
+// Test cmdRecv with too many arguments
+func TestCmdRecvTooManyArgsError(t *testing.T) {
+	cleanup := setupPeerTestConfig(t, `version: 1
+peers:
+  dev:
+    ssh: user@host
+`)
+	defer cleanup()
+
+	err := cmdRecv([]string{"peer1", "peer2"})
+	if err == nil {
+		t.Error("cmdRecv should error with too many args")
+	}
+	if !strings.Contains(err.Error(), "usage:") {
+		t.Errorf("error should show usage: %v", err)
+	}
+}
+
+// Test cmdPeek with too many arguments
+func TestCmdPeekTooManyArgsError(t *testing.T) {
+	cleanup := setupPeerTestConfig(t, `version: 1
+peers:
+  dev:
+    ssh: user@host
+`)
+	defer cleanup()
+
+	err := cmdPeek([]string{"peer1", "peer2"})
+	if err == nil {
+		t.Error("cmdPeek should error with too many args")
+	}
+	if !strings.Contains(err.Error(), "usage:") {
+		t.Errorf("error should show usage: %v", err)
+	}
+}
+
+// Test cmdSend with no config file
+func TestCmdSendNoConfigFile(t *testing.T) {
+	cleanup := setupPeerTestConfig(t, "")
+	defer cleanup()
+
+	err := cmdSend([]string{"anypeer"})
+	if err == nil {
+		t.Error("cmdSend should error when no config file exists")
+	}
+}
+
+// Test cmdRecv with no config file
+func TestCmdRecvNoConfigFile(t *testing.T) {
+	cleanup := setupPeerTestConfig(t, "")
+	defer cleanup()
+
+	err := cmdRecv([]string{"anypeer"})
+	if err == nil {
+		t.Error("cmdRecv should error when no config file exists")
+	}
+}
+
+// Test cmdPeek with no config file
+func TestCmdPeekNoConfigFile(t *testing.T) {
+	cleanup := setupPeerTestConfig(t, "")
+	defer cleanup()
+
+	err := cmdPeek([]string{"anypeer"})
+	if err == nil {
+		t.Error("cmdPeek should error when no config file exists")
+	}
+}

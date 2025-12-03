@@ -170,3 +170,99 @@ func TestEncryptProducesDifferentOutput(t *testing.T) {
 		t.Error("both encrypted values should decrypt to same plaintext")
 	}
 }
+
+// TestDecryptCorruptedSalt tests decrypt with corrupted salt portion
+func TestDecryptCorruptedSalt(t *testing.T) {
+	plaintext := []byte("secret message")
+	encrypted, err := encrypt(plaintext, "test-pass")
+	if err != nil {
+		t.Fatalf("encrypt() error: %v", err)
+	}
+
+	// Corrupt the salt (first 16 bytes)
+	encrypted[0] ^= 0xff
+
+	_, err = decrypt(encrypted, "test-pass")
+	if err == nil {
+		t.Error("decrypt with corrupted salt should return error")
+	}
+}
+
+// TestDecryptCorruptedNonce tests decrypt with corrupted nonce portion
+func TestDecryptCorruptedNonce(t *testing.T) {
+	plaintext := []byte("secret message")
+	encrypted, err := encrypt(plaintext, "test-pass")
+	if err != nil {
+		t.Fatalf("encrypt() error: %v", err)
+	}
+
+	// Corrupt the nonce (bytes 16-27)
+	encrypted[saltSize] ^= 0xff
+
+	_, err = decrypt(encrypted, "test-pass")
+	if err == nil {
+		t.Error("decrypt with corrupted nonce should return error")
+	}
+}
+
+// TestDecryptBoundaryLength tests decrypt with exactly minimum length
+func TestDecryptBoundaryLength(t *testing.T) {
+	// Minimum length is saltSize + nonceSize + 16 (GCM tag) = 44 bytes
+	minLen := saltSize + nonceSize + 16
+
+	// Test with exactly minimum length - should not panic, just fail decryption
+	data := make([]byte, minLen)
+	_, err := decrypt(data, "test-pass")
+	if err == nil {
+		t.Error("decrypt with random minimum-length data should fail")
+	}
+
+	// Test with one byte less than minimum
+	data = make([]byte, minLen-1)
+	_, err = decrypt(data, "test-pass")
+	if err == nil {
+		t.Error("decrypt with data one byte too short should fail")
+	}
+	if err.Error() != "ciphertext too short" {
+		t.Errorf("expected 'ciphertext too short' error, got: %v", err)
+	}
+}
+
+// TestDecryptEmptyPassphraseErrorMessage tests specific error message
+func TestDecryptEmptyPassphraseErrorMessage(t *testing.T) {
+	data := make([]byte, 50)
+	_, err := decrypt(data, "")
+	if err == nil {
+		t.Error("decrypt with empty passphrase should return error")
+	}
+	if err.Error() != "passphrase cannot be empty" {
+		t.Errorf("expected 'passphrase cannot be empty' error, got: %v", err)
+	}
+}
+
+// TestEncryptEmptyPassphraseErrorMessage tests specific error message
+func TestEncryptEmptyPassphraseErrorMessage(t *testing.T) {
+	_, err := encrypt([]byte("test"), "")
+	if err == nil {
+		t.Error("encrypt with empty passphrase should return error")
+	}
+	if err.Error() != "passphrase cannot be empty" {
+		t.Errorf("expected 'passphrase cannot be empty' error, got: %v", err)
+	}
+}
+
+// TestDecryptWrongPassphraseErrorMessage tests specific error message
+func TestDecryptWrongPassphraseErrorMessage(t *testing.T) {
+	encrypted, err := encrypt([]byte("secret"), "correct-pass")
+	if err != nil {
+		t.Fatalf("encrypt() error: %v", err)
+	}
+
+	_, err = decrypt(encrypted, "wrong-pass")
+	if err == nil {
+		t.Error("decrypt with wrong passphrase should return error")
+	}
+	if err.Error() != "decryption failed (wrong passphrase?)" {
+		t.Errorf("expected 'decryption failed' error, got: %v", err)
+	}
+}
