@@ -173,5 +173,47 @@
 
   <!-- External link icon -->
   <script src="//cdn.jsdelivr.net/npm/docsify/lib/plugins/external-script.min.js"></script>
+
+  <!-- Fix copy functionality on coverpage code blocks -->
+  <script>
+    window.$docsify.plugins = window.$docsify.plugins || [];
+    window.$docsify.plugins.push(function(hook) {
+      hook.doneEach(function() {
+        // Enable click-to-copy on coverpage code blocks
+        document.querySelectorAll('section.cover pre').forEach(function(pre) {
+          if (pre.dataset.copyEnabled) return;
+          pre.dataset.copyEnabled = 'true';
+          pre.style.cursor = 'pointer';
+
+          pre.addEventListener('click', function() {
+            var code = pre.querySelector('code');
+            if (!code) return;
+            var text = code.textContent;
+
+            navigator.clipboard.writeText(text).then(function() {
+              pre.classList.add('copied');
+              setTimeout(function() { pre.classList.remove('copied'); }, 2000);
+            }).catch(function(err) {
+              // Fallback for older browsers
+              var textarea = document.createElement('textarea');
+              textarea.value = text;
+              textarea.style.position = 'fixed';
+              textarea.style.opacity = '0';
+              document.body.appendChild(textarea);
+              textarea.select();
+              try {
+                document.execCommand('copy');
+                pre.classList.add('copied');
+                setTimeout(function() { pre.classList.remove('copied'); }, 2000);
+              } catch(e) {
+                console.error('Copy failed:', e);
+              }
+              document.body.removeChild(textarea);
+            });
+          });
+        });
+      });
+    });
+  </script>
 </body>
 </html>
