@@ -42,6 +42,40 @@ func getClipboardHistoryLimit() int {
 	return cfg.History.Limit
 }
 
+// getHistoryConfig returns the full history configuration
+func getHistoryConfig() *HistoryConfig {
+	cfg, err := loadConfig()
+	if err != nil || cfg.History == nil {
+		return &HistoryConfig{Limit: defaultClipboardHistoryLimit}
+	}
+	return cfg.History
+}
+
+// applyHistoryTTL removes entries older than TTL days
+func applyHistoryTTL(history []ClipboardHistoryEntry, ttlDays int) []ClipboardHistoryEntry {
+	if ttlDays <= 0 {
+		return history
+	}
+	cutoff := time.Now().AddDate(0, 0, -ttlDays)
+	var filtered []ClipboardHistoryEntry
+	for _, h := range history {
+		if h.Timestamp.After(cutoff) {
+			filtered = append(filtered, h)
+		}
+	}
+	return filtered
+}
+
+// isDuplicateInHistory checks if content hash exists anywhere in history
+func isDuplicateInHistory(history []ClipboardHistoryEntry, hash string) bool {
+	for _, h := range history {
+		if h.Hash == hash {
+			return true
+		}
+	}
+	return false
+}
+
 func getHistoryPath() string {
 	configDir := os.Getenv("XDG_CONFIG_HOME")
 	if configDir == "" {
@@ -131,19 +165,35 @@ func recordClipboardHistory(content []byte) {
 		return
 	}
 
+	// Get history configuration
+	histCfg := getHistoryConfig()
+
 	// Load existing history
 	var history []ClipboardHistoryEntry
 	if data, err := os.ReadFile(path); err == nil {
 		_ = json.Unmarshal(data, &history)
 	}
 
+	// Apply TTL cleanup first
+	if histCfg.TTLDays > 0 {
+		history = applyHistoryTTL(history, histCfg.TTLDays)
+	}
+
 	// Compute hash (always on plaintext for deduplication)
 	hashBytes := sha256.Sum256(content)
 	hash := hex.EncodeToString(hashBytes[:])
 
-	// Check for duplicate (don't add if same as most recent)
-	if len(history) > 0 && history[len(history)-1].Hash == hash {
-		return
+	// Check for duplicates
+	if histCfg.NoDuplicates {
+		// Full duplicate detection: check all entries
+		if isDuplicateInHistory(history, hash) {
+			return
+		}
+	} else {
+		// Default: only check most recent entry
+		if len(history) > 0 && history[len(history)-1].Hash == hash {
+			return
+		}
 	}
 
 	// Generate preview
@@ -184,7 +234,10 @@ func recordClipboardHistory(content []byte) {
 	})
 
 	// Trim to max entries
-	limit := getClipboardHistoryLimit()
+	limit := histCfg.Limit
+	if limit <= 0 {
+		limit = defaultClipboardHistoryLimit
+	}
 	if len(history) > limit {
 		history = history[len(history)-limit:]
 	}
@@ -344,6 +397,12 @@ func showClipboardHistory(jsonOutput bool, searchQuery string) error {
 	var history []ClipboardHistoryEntry
 	if err := json.Unmarshal(data, &history); err != nil {
 		return err
+	}
+
+	// Apply TTL cleanup on read
+	histCfg := getHistoryConfig()
+	if histCfg.TTLDays > 0 {
+		history = applyHistoryTTL(history, histCfg.TTLDays)
 	}
 
 	if len(history) == 0 {

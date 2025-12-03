@@ -1643,3 +1643,201 @@ func TestCmdHistoryMultipleFilters(t *testing.T) {
 		t.Errorf("cmdHistory with multiple filters should not error: %v", err)
 	}
 }
+
+// Test applyHistoryTTL removes old entries
+func TestApplyHistoryTTL(t *testing.T) {
+	now := time.Now()
+	history := []ClipboardHistoryEntry{
+		{Timestamp: now.AddDate(0, 0, -10), Hash: "old", Preview: "old"},
+		{Timestamp: now.AddDate(0, 0, -5), Hash: "mid", Preview: "mid"},
+		{Timestamp: now.AddDate(0, 0, -1), Hash: "new", Preview: "new"},
+	}
+
+	// TTL of 7 days should remove the 10-day-old entry
+	filtered := applyHistoryTTL(history, 7)
+	if len(filtered) != 2 {
+		t.Errorf("expected 2 entries after TTL filter, got %d", len(filtered))
+	}
+
+	// Verify correct entries remain
+	if filtered[0].Hash != "mid" || filtered[1].Hash != "new" {
+		t.Error("wrong entries remained after TTL filter")
+	}
+}
+
+// Test applyHistoryTTL with zero TTL (disabled)
+func TestApplyHistoryTTLDisabled(t *testing.T) {
+	history := []ClipboardHistoryEntry{
+		{Timestamp: time.Now().AddDate(-1, 0, 0), Hash: "old", Preview: "old"},
+	}
+
+	// TTL of 0 should not filter anything
+	filtered := applyHistoryTTL(history, 0)
+	if len(filtered) != 1 {
+		t.Errorf("TTL=0 should not filter, got %d entries", len(filtered))
+	}
+}
+
+// Test isDuplicateInHistory
+func TestIsDuplicateInHistory(t *testing.T) {
+	history := []ClipboardHistoryEntry{
+		{Hash: "hash1", Preview: "content1"},
+		{Hash: "hash2", Preview: "content2"},
+		{Hash: "hash3", Preview: "content3"},
+	}
+
+	if !isDuplicateInHistory(history, "hash2") {
+		t.Error("should find hash2 as duplicate")
+	}
+
+	if isDuplicateInHistory(history, "hash4") {
+		t.Error("should not find hash4 as duplicate")
+	}
+
+	// Empty history
+	if isDuplicateInHistory([]ClipboardHistoryEntry{}, "hash1") {
+		t.Error("empty history should not have duplicates")
+	}
+}
+
+// Test getHistoryConfig returns defaults when no config
+func TestGetHistoryConfigDefaults(t *testing.T) {
+	tmpDir := t.TempDir()
+	origConfig := os.Getenv("PIPEBOARD_CONFIG")
+	defer func() {
+		if origConfig != "" {
+			_ = os.Setenv("PIPEBOARD_CONFIG", origConfig)
+		} else {
+			_ = os.Unsetenv("PIPEBOARD_CONFIG")
+		}
+	}()
+
+	// Point to non-existent config
+	_ = os.Setenv("PIPEBOARD_CONFIG", tmpDir+"/nonexistent.yaml")
+
+	cfg := getHistoryConfig()
+	if cfg.Limit != defaultClipboardHistoryLimit {
+		t.Errorf("expected default limit %d, got %d", defaultClipboardHistoryLimit, cfg.Limit)
+	}
+}
+
+// Test full duplicate detection with NoDuplicates config
+func TestRecordClipboardHistoryNoDuplicatesConfig(t *testing.T) {
+	tmpDir := t.TempDir()
+	origXDG := os.Getenv("XDG_CONFIG_HOME")
+	origConfig := os.Getenv("PIPEBOARD_CONFIG")
+	defer func() {
+		if origXDG != "" {
+			_ = os.Setenv("XDG_CONFIG_HOME", origXDG)
+		} else {
+			_ = os.Unsetenv("XDG_CONFIG_HOME")
+		}
+		if origConfig != "" {
+			_ = os.Setenv("PIPEBOARD_CONFIG", origConfig)
+		} else {
+			_ = os.Unsetenv("PIPEBOARD_CONFIG")
+		}
+	}()
+	_ = os.Setenv("XDG_CONFIG_HOME", tmpDir)
+
+	// Create config with no_duplicates enabled
+	configPath := tmpDir + "/config.yaml"
+	configContent := `version: 1
+sync:
+  backend: local
+history:
+  limit: 20
+  no_duplicates: true
+`
+	_ = os.WriteFile(configPath, []byte(configContent), 0600)
+	_ = os.Setenv("PIPEBOARD_CONFIG", configPath)
+
+	// Record: A, B, A (with full dedup, second A should be skipped)
+	recordClipboardHistory([]byte("content_A"))
+	recordClipboardHistory([]byte("content_B"))
+	recordClipboardHistory([]byte("content_A")) // duplicate
+
+	path := getClipboardHistoryPath()
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("failed to read clipboard history: %v", err)
+	}
+
+	var history []ClipboardHistoryEntry
+	if err := json.Unmarshal(data, &history); err != nil {
+		t.Fatalf("failed to parse clipboard history: %v", err)
+	}
+
+	// Should have 2 entries (A and B), not 3
+	if len(history) != 2 {
+		t.Errorf("expected 2 entries with no_duplicates, got %d", len(history))
+	}
+}
+
+// Test TTL config integration
+func TestRecordClipboardHistoryTTLConfig(t *testing.T) {
+	tmpDir := t.TempDir()
+	origXDG := os.Getenv("XDG_CONFIG_HOME")
+	origConfig := os.Getenv("PIPEBOARD_CONFIG")
+	defer func() {
+		if origXDG != "" {
+			_ = os.Setenv("XDG_CONFIG_HOME", origXDG)
+		} else {
+			_ = os.Unsetenv("XDG_CONFIG_HOME")
+		}
+		if origConfig != "" {
+			_ = os.Setenv("PIPEBOARD_CONFIG", origConfig)
+		} else {
+			_ = os.Unsetenv("PIPEBOARD_CONFIG")
+		}
+	}()
+	_ = os.Setenv("XDG_CONFIG_HOME", tmpDir)
+
+	// Create config with TTL
+	configPath := tmpDir + "/config.yaml"
+	configContent := `version: 1
+sync:
+  backend: local
+history:
+  limit: 20
+  ttl_days: 7
+`
+	_ = os.WriteFile(configPath, []byte(configContent), 0600)
+	_ = os.Setenv("PIPEBOARD_CONFIG", configPath)
+
+	// Pre-populate with an old entry (manually)
+	histPath := getClipboardHistoryPath()
+	_ = os.MkdirAll(tmpDir+"/pipeboard", 0755)
+	oldEntry := []ClipboardHistoryEntry{
+		{
+			Timestamp: time.Now().AddDate(0, 0, -10), // 10 days old
+			Hash:      "oldhash",
+			Preview:   "old content",
+			Size:      11,
+			Content:   []byte("old content"),
+		},
+	}
+	oldData, _ := json.Marshal(oldEntry)
+	_ = os.WriteFile(histPath, oldData, 0600)
+
+	// Record new content - should trigger TTL cleanup
+	recordClipboardHistory([]byte("new content"))
+
+	data, err := os.ReadFile(histPath)
+	if err != nil {
+		t.Fatalf("failed to read clipboard history: %v", err)
+	}
+
+	var history []ClipboardHistoryEntry
+	if err := json.Unmarshal(data, &history); err != nil {
+		t.Fatalf("failed to parse clipboard history: %v", err)
+	}
+
+	// Should only have the new entry (old one TTL'd out)
+	if len(history) != 1 {
+		t.Errorf("expected 1 entry after TTL cleanup, got %d", len(history))
+	}
+	if len(history) > 0 && history[0].Hash == "oldhash" {
+		t.Error("old entry should have been removed by TTL")
+	}
+}

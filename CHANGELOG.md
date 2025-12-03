@@ -8,6 +8,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [0.7.2] - 2025-12-02
 
 ### Added
+- **Clipboard history TTL** - Auto-delete old entries with `history.ttl_days` config option
+  - Entries older than N days are automatically removed on read/write
+  - Set to 0 (default) to disable TTL
+- **Full duplicate detection** - Skip duplicate content with `history.no_duplicates` config option
+  - When enabled, checks all history entries (not just most recent)
+  - Prevents storing the same content multiple times
 - **SSH peer integration test** - Automated Docker-based test infrastructure in `scripts/test-ssh-peer.sh`
   - Tests bidirectional clipboard sync over SSH using Alpine containers
   - Includes xclip wrapper for headless clipboard access via Xvfb
@@ -24,7 +30,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Tests with various data sizes (empty, small, medium, large)
 
 ### Changed
-- Test coverage increased to 534 tests
+- Test coverage increased to 540 tests
 - Improved peer.go test coverage with 6 new tests for error paths:
   - Too many arguments validation for cmdSend, cmdRecv, cmdPeek
   - No config file error handling for cmdSend, cmdRecv, cmdPeek

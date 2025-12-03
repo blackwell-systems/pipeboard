@@ -26,7 +26,9 @@ type DefaultsConfig struct {
 }
 
 type HistoryConfig struct {
-	Limit int `yaml:"limit,omitempty"` // max clipboard history entries (default: 20)
+	Limit        int  `yaml:"limit,omitempty"`         // max clipboard history entries (default: 20)
+	TTLDays      int  `yaml:"ttl_days,omitempty"`      // auto-delete entries older than N days (0 = never)
+	NoDuplicates bool `yaml:"no_duplicates,omitempty"` // skip entries with same content hash
 }
 
 // FxConfig defines a clipboard transform
