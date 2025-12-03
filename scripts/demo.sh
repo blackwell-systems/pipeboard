@@ -76,7 +76,7 @@ docker run -d --name pipeboard-demo-b --network pipeboard-demo \
 log "Installing dependencies..."
 for container in pipeboard-demo-a pipeboard-demo-b; do
     docker exec $container sh -c '
-        apk add --no-cache openssh go git xclip xvfb bash >/dev/null 2>&1
+        apk add --no-cache openssh go git xclip xvfb bash jq coreutils >/dev/null 2>&1
         ssh-keygen -A >/dev/null 2>&1
         echo "PermitRootLogin yes" >> /etc/ssh/sshd_config
         echo "PasswordAuthentication no" >> /etc/ssh/sshd_config
@@ -136,6 +136,13 @@ peers:
   machine-b:
     ssh: root@pipeboard-demo-b
     remote_cmd: env DISPLAY=:99 pipeboard
+sync:
+  backend: local
+  encryption: aes256
+  passphrase: demo-secret-key
+history:
+  limit: 50
+  no_duplicates: true
 fx:
   upper:
     shell: "tr a-z A-Z"
@@ -145,6 +152,26 @@ fx:
     shell: "sed \"s/^[[:space:]]*//;s/[[:space:]]*$//\""
   reverse:
     shell: "rev"
+  pretty-json:
+    cmd: ["jq", "."]
+  compact-json:
+    cmd: ["jq", "-c", "."]
+  base64-encode:
+    shell: "base64"
+  base64-decode:
+    shell: "base64 -d"
+  sort-lines:
+    shell: "sort"
+  unique:
+    shell: "sort -u"
+  word-count:
+    shell: "wc -w | tr -d \" \""
+  line-count:
+    shell: "wc -l | tr -d \" \""
+  sha256:
+    shell: "sha256sum | cut -d\" \" -f1"
+  strip-ansi:
+    shell: "sed \"s/\\x1b\\[[0-9;]*m//g\""
 EOF'
 
 # Machine B config
@@ -156,6 +183,13 @@ peers:
   machine-a:
     ssh: root@pipeboard-demo-a
     remote_cmd: env DISPLAY=:99 pipeboard
+sync:
+  backend: local
+  encryption: aes256
+  passphrase: demo-secret-key
+history:
+  limit: 50
+  no_duplicates: true
 fx:
   upper:
     shell: "tr a-z A-Z"
@@ -165,42 +199,92 @@ fx:
     shell: "sed \"s/^[[:space:]]*//;s/[[:space:]]*$//\""
   reverse:
     shell: "rev"
+  pretty-json:
+    cmd: ["jq", "."]
+  compact-json:
+    cmd: ["jq", "-c", "."]
+  base64-encode:
+    shell: "base64"
+  base64-decode:
+    shell: "base64 -d"
+  sort-lines:
+    shell: "sort"
+  unique:
+    shell: "sort -u"
+  word-count:
+    shell: "wc -w | tr -d \" \""
+  line-count:
+    shell: "wc -l | tr -d \" \""
+  sha256:
+    shell: "sha256sum | cut -d\" \" -f1"
+  strip-ansi:
+    shell: "sed \"s/\\x1b\\[[0-9;]*m//g\""
 EOF'
 success "Configuration complete"
+
+log "Pre-populating clipboard history..."
+for container in pipeboard-demo-a pipeboard-demo-b; do
+    docker exec -e DISPLAY=:99 $container sh -c '
+        echo "First clipboard entry" | pipeboard copy
+        sleep 0.2
+        echo "{\"name\": \"demo\", \"version\": 1}" | pipeboard copy
+        sleep 0.2
+        echo "https://github.com/blackwell-systems/pipeboard" | pipeboard copy
+        sleep 0.2
+    ' 2>/dev/null
+done
+success "History pre-populated"
+
+log "Creating example slots..."
+docker exec -e DISPLAY=:99 pipeboard-demo-a sh -c '
+    echo "Example kubeconfig content" | pipeboard copy
+    pipeboard push kube-example
+    echo "API_KEY=sk-demo-12345" | pipeboard copy
+    pipeboard push secrets-example
+' 2>/dev/null
+success "Example slots created"
 
 # Create welcome script
 docker exec pipeboard-demo-a sh -c 'cat > /root/welcome.sh << "EOF"
 #!/bin/bash
 clear
 echo ""
-echo -e "\033[1;36m╔══════════════════════════════════════════════════════════════╗\033[0m"
-echo -e "\033[1;36m║\033[0m  Welcome to \033[1mpipeboard\033[0m Demo - You are on \033[1;32mMachine A\033[0m            \033[1;36m║\033[0m"
-echo -e "\033[1;36m╚══════════════════════════════════════════════════════════════╝\033[0m"
+echo -e "\033[1;36m╔══════════════════════════════════════════════════════════════════╗\033[0m"
+echo -e "\033[1;36m║\033[0m  Welcome to \033[1mpipeboard\033[0m Demo - You are on \033[1;32mMachine A\033[0m               \033[1;36m║\033[0m"
+echo -e "\033[1;36m╚══════════════════════════════════════════════════════════════════╝\033[0m"
 echo ""
-echo -e "\033[1;33m📋 TRY THESE COMMANDS:\033[0m"
+echo -e "\033[1;33m📋 BASIC CLIPBOARD\033[0m"
+echo "  echo \"hello\" | pipeboard          # copy"
+echo "  pipeboard paste                    # paste"
 echo ""
-echo -e "\033[1mBasic clipboard:\033[0m"
-echo "  echo \"hello world\" | pipeboard       # copy to clipboard"
-echo "  pipeboard paste                       # paste from clipboard"
+echo -e "\033[1;33m🔄 PEER SYNC (SSH)\033[0m"
+echo "  pipeboard send                     # send clipboard to Machine B"
+echo "  pipeboard recv                     # receive from Machine B"
+echo "  pipeboard peek                     # view B without copying"
+echo "  pipeboard watch                    # real-time sync (Ctrl+C to stop)"
 echo ""
-echo -e "\033[1mSend to Machine B:\033[0m"
-echo "  echo \"secret message\" | pipeboard    # copy something"
-echo "  pipeboard send                        # send to machine-b"
+echo -e "\033[1;33m💾 NAMED SLOTS (encrypted storage)\033[0m"
+echo "  pipeboard slots                    # list saved slots"
+echo "  pipeboard pull kube-example        # restore a saved slot"
+echo "  pipeboard push my-snippet          # save current clipboard"
+echo "  pipeboard show secrets-example     # view without copying"
 echo ""
-echo -e "\033[1mTransforms:\033[0m"
-echo "  echo \"hello\" | pipeboard && pipeboard fx upper && pipeboard paste"
-echo "  pipeboard fx --list                   # see available transforms"
+echo -e "\033[1;33m🔧 TRANSFORMS (14 available)\033[0m"
+echo "  pipeboard fx --list                # see all transforms"
+echo "  pipeboard fx pretty-json           # format JSON"
+echo "  pipeboard fx upper reverse         # chain transforms"
+echo "  pipeboard fx sha256                # hash clipboard"
 echo ""
-echo -e "\033[1mHistory:\033[0m"
-echo "  pipeboard history --local             # see clipboard history"
-echo "  pipeboard recall 1                    # restore previous entry"
+echo -e "\033[1;33m📜 HISTORY\033[0m"
+echo "  pipeboard history --local          # view history (pre-populated!)"
+echo "  pipeboard recall 2                 # restore entry #2"
 echo ""
-echo -e "\033[1;34m💡 Open another terminal and run:\033[0m"
-echo "  docker exec -it pipeboard-demo-b bash"
-echo "  Then: pipeboard paste    # to see what Machine A sent!"
+echo -e "\033[1;33m🩺 DIAGNOSTICS\033[0m"
+echo "  pipeboard doctor                   # check setup"
+echo "  cat ~/.config/pipeboard/config.yaml"
 echo ""
-echo "═══════════════════════════════════════════════════════════════"
-echo ""
+echo -e "\033[1;34m💡 Tip: Open another terminal:\033[0m docker exec -it pipeboard-demo-b bash"
+echo "════════════════════════════════════════════════════════════════════"
 EOF
 chmod +x /root/welcome.sh
 echo "source /root/welcome.sh" >> /root/.bashrc'
@@ -209,25 +293,36 @@ docker exec pipeboard-demo-b sh -c 'cat > /root/welcome.sh << "EOF"
 #!/bin/bash
 clear
 echo ""
-echo -e "\033[1;36m╔══════════════════════════════════════════════════════════════╗\033[0m"
-echo -e "\033[1;36m║\033[0m  Welcome to \033[1mpipeboard\033[0m Demo - You are on \033[1;33mMachine B\033[0m            \033[1;36m║\033[0m"
-echo -e "\033[1;36m╚══════════════════════════════════════════════════════════════╝\033[0m"
+echo -e "\033[1;36m╔══════════════════════════════════════════════════════════════════╗\033[0m"
+echo -e "\033[1;36m║\033[0m  Welcome to \033[1mpipeboard\033[0m Demo - You are on \033[1;33mMachine B\033[0m               \033[1;36m║\033[0m"
+echo -e "\033[1;36m╚══════════════════════════════════════════════════════════════════╝\033[0m"
 echo ""
-echo -e "\033[1;33m📋 TRY THESE COMMANDS:\033[0m"
+echo -e "\033[1;33m📋 BASIC CLIPBOARD\033[0m"
+echo "  pipeboard paste                    # see current clipboard"
+echo "  echo \"from B\" | pipeboard         # copy something new"
 echo ""
-echo -e "\033[1mReceive from Machine A:\033[0m"
-echo "  pipeboard paste                       # see what Machine A sent"
-echo "  pipeboard recv                        # pull clipboard from A"
+echo -e "\033[1;33m🔄 PEER SYNC (SSH)\033[0m"
+echo "  pipeboard recv                     # pull from Machine A"
+echo "  pipeboard send                     # send to Machine A"
+echo "  pipeboard peek                     # view A without copying"
+echo "  pipeboard watch                    # real-time sync (Ctrl+C to stop)"
 echo ""
-echo -e "\033[1mSend back to Machine A:\033[0m"
-echo "  echo \"reply from B\" | pipeboard"
-echo "  pipeboard send                        # send to machine-a"
+echo -e "\033[1;33m💾 NAMED SLOTS (encrypted storage)\033[0m"
+echo "  pipeboard slots                    # list saved slots"
+echo "  pipeboard push notes               # save clipboard to slot"
+echo "  pipeboard pull notes               # restore from slot"
 echo ""
-echo -e "\033[1mPeek without copying:\033[0m"
-echo "  pipeboard peek                        # view Machine A clipboard"
+echo -e "\033[1;33m🔧 TRANSFORMS\033[0m"
+echo "  pipeboard fx --list                # see all transforms"
+echo "  pipeboard fx base64-encode         # encode clipboard"
+echo "  pipeboard fx word-count            # count words"
 echo ""
-echo "═══════════════════════════════════════════════════════════════"
+echo -e "\033[1;33m📜 HISTORY\033[0m"
+echo "  pipeboard history --local          # view history"
+echo "  pipeboard recall 1                 # restore previous entry"
 echo ""
+echo -e "\033[1;34m💡 Tip: Try syncing!\033[0m Machine A may have sent something."
+echo "════════════════════════════════════════════════════════════════════"
 EOF
 chmod +x /root/welcome.sh
 echo "source /root/welcome.sh" >> /root/.bashrc'

@@ -32,8 +32,10 @@ The demo creates two "machines" that can send clipboard data to each other:
 Both machines have:
 - pipeboard built from source
 - SSH configured for passwordless access
-- Example transforms (upper, lower, trim, reverse)
-- Clipboard history enabled
+- 14 transforms (upper, lower, pretty-json, base64, sha256, etc.)
+- Local encrypted slots with example data
+- Pre-populated clipboard history
+- Duplicate detection enabled
 
 ## Demo Walkthrough
 
@@ -72,16 +74,33 @@ pipeboard paste    # see the message!
 
 ### 4. Try Transforms
 
-On either machine:
+14 transforms are pre-configured:
+
 ```bash
+pipeboard fx --list              # see all transforms
+
+# Text transforms
 echo "hello" | pipeboard
-pipeboard fx upper
-pipeboard paste    # HELLO
+pipeboard fx upper && pipeboard paste    # HELLO
+pipeboard fx reverse && pipeboard paste  # OLLEH
 
-pipeboard fx reverse
-pipeboard paste    # OLLEH
+# JSON formatting
+echo '{"a":1,"b":2}' | pipeboard
+pipeboard fx pretty-json && pipeboard paste
 
-pipeboard fx --list    # see all transforms
+# Encoding
+echo "secret" | pipeboard
+pipeboard fx base64-encode && pipeboard paste    # c2VjcmV0Cg==
+
+# Chain multiple transforms
+echo "Hello World" | pipeboard
+pipeboard fx lower sha256 && pipeboard paste     # hash of lowercase
+
+# Utility transforms
+pipeboard fx word-count      # count words
+pipeboard fx line-count      # count lines
+pipeboard fx sort-lines      # sort lines
+pipeboard fx unique          # remove duplicates
 ```
 
 ### 5. Clipboard History
@@ -103,7 +122,23 @@ On Machine B, view Machine A's clipboard without modifying your own:
 pipeboard peek    # shows what's on Machine A
 ```
 
-### 7. Bidirectional Sync
+### 7. Named Slots (Encrypted Storage)
+
+The demo has pre-created encrypted slots:
+
+```bash
+pipeboard slots                  # list available slots
+pipeboard pull kube-example      # restore to clipboard
+pipeboard paste                  # see the content
+pipeboard show secrets-example   # view without copying
+
+# Create your own
+echo "my important note" | pipeboard
+pipeboard push my-notes          # save with encryption
+pipeboard slots                  # see it in the list
+```
+
+### 8. Bidirectional Sync
 
 On Machine B:
 ```bash
@@ -115,6 +150,22 @@ On Machine A:
 ```bash
 pipeboard paste    # reply from B
 ```
+
+### 9. Watch Mode (Real-time Sync)
+
+Try real-time bidirectional sync:
+
+On Machine A:
+```bash
+pipeboard watch    # starts watching
+```
+
+On Machine B (in another terminal):
+```bash
+echo "instant sync!" | pipeboard
+```
+
+Machine A's clipboard updates automatically! Press Ctrl+C to stop watching.
 
 ## Cleanup
 

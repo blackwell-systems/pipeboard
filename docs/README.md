@@ -198,6 +198,7 @@ See [Platforms](platforms.md) for platform-specific details.
 
 ## Documentation
 
+- [Test Drive](https://github.com/blackwell-systems/pipeboard/blob/main/TESTDRIVE.md) — Try pipeboard without installing (Docker)
 - [Getting Started](getting-started.md) — Installation and first commands
 - [Commands](commands.md) — Full command reference with all flags
 - [Transforms](transforms.md) — Build your own clipboard pipelines

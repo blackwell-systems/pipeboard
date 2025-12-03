@@ -78,6 +78,11 @@ pipeboard recall 1              # restore previous entry
 
 See [Getting Started](docs/getting-started.md) for installation options.
 
+**Want to try first?** Run the [Test Drive](TESTDRIVE.md) - no installation required, just Docker:
+```bash
+git clone https://github.com/blackwell-systems/pipeboard && cd pipeboard && ./scripts/demo.sh
+```
+
 ## Platform Support
 
 | Platform | Clipboard | Image | Notes |
