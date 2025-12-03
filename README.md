@@ -90,7 +90,7 @@ See [Getting Started](docs/getting-started.md) for installation options.
 
 Run `pipeboard doctor` to check your setup.
 
-## Documentation
+**📚 [Complete Documentation Site](https://blackwell-systems.github.io/pipeboard/)**
 
 - [Getting Started](docs/getting-started.md) — Installation and first commands
 - [Commands](docs/commands.md) — Full command reference
