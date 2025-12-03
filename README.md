@@ -11,7 +11,7 @@
 [![Dependabot](https://img.shields.io/badge/Dependabot-enabled-brightgreen?logo=dependabot)](https://github.com/blackwell-systems/pipeboard/security/dependabot)
 [![Release](https://img.shields.io/github/v/release/blackwell-systems/pipeboard)](https://github.com/blackwell-systems/pipeboard/releases)
 
-[![Tests](https://img.shields.io/badge/tests-555-success)](https://github.com/blackwell-systems/pipeboard)
+[![Tests](https://img.shields.io/badge/tests-559-success)](https://github.com/blackwell-systems/pipeboard)
 [![codecov](https://codecov.io/gh/blackwell-systems/pipeboard/branch/main/graph/badge.svg)](https://codecov.io/gh/blackwell-systems/pipeboard)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](https://github.com/blackwell-systems/pipeboard/issues)
 [![Sponsor](https://img.shields.io/badge/Sponsor-Buy%20Me%20a%20Coffee-yellow?logo=buy-me-a-coffee&logoColor=white)](https://buymeacoffee.com/blackwellsystems)
@@ -77,6 +77,60 @@ pipeboard recall 1              # restore previous entry
 ```
 
 See [Getting Started](docs/getting-started.md) for installation options.
+
+## Power Workflows
+
+### Async clipboard: push now, pull anywhere
+
+Save something on your laptop, pull it on a server hours later:
+
+```bash
+# Laptop at coffee shop
+pipeboard push deploy-script
+
+# Server at home (hours later)
+pipeboard pull deploy-script
+```
+
+Slots work across networks, time zones, and reboots. Local or S3-backed.
+
+### Find and restore anything you copied
+
+Search your clipboard history and restore what you need:
+
+```bash
+pipeboard history --local --search "Bearer"    # find that API token
+pipeboard recall 2                              # restore it
+```
+
+History is searchable, indexed, and persists across sessions.
+
+### Encrypted secrets with auto-expiry
+
+Store sensitive data that self-destructs:
+
+```yaml
+# ~/.config/pipeboard/config.yaml
+sync:
+  encryption: aes256
+  passphrase: ${PIPEBOARD_PASSPHRASE}
+  ttl_days: 1    # auto-delete after 24 hours
+```
+
+```bash
+pipeboard push api-key     # encrypted, expires tomorrow
+pipeboard pull api-key     # teammate decrypts, then it's gone
+```
+
+### Track what you synced
+
+Every push, pull, send, and receive is logged:
+
+```bash
+pipeboard history --slots                    # what did I push/pull?
+pipeboard history --peer                     # what did I send/receive?
+pipeboard history --json | jq 'select(.slot=="prod")'
+```
 
 **Want to try first?** Run the [Test Drive](TESTDRIVE.md) - no installation required, just Docker:
 ```bash
