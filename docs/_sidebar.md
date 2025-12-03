@@ -18,6 +18,7 @@
   - [Testing](testing.md)
 
 - **Project**
+  - [Roadmap](roadmap.md)
   - [Changelog](https://github.com/blackwell-systems/pipeboard/blob/main/CHANGELOG.md)
   - [Contributing](https://github.com/blackwell-systems/pipeboard/blob/main/CONTRIBUTING.md)
   - [Security](https://github.com/blackwell-systems/pipeboard/blob/main/SECURITY.md)

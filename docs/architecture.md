@@ -432,12 +432,6 @@ storage:
     path: "/home/user/.pipeboard/slots"
 ```
 
-## Future Enhancements
+## See Also
 
-Potential architectural improvements:
-
-1. **Real-time Sync** - WebSocket connections for instant sync
-2. **Conflict Resolution** - CRDT-based merge for concurrent edits
-3. **Plugin System** - Dynamic transform/backend loading
-4. **Multi-user Sharing** - Shared slots with access control
-5. **Mobile Apps** - iOS/Android clipboard integration
+- [Roadmap](roadmap.md) - Future enhancement ideas and feature proposals
