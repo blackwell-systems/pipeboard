@@ -8,13 +8,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Changed
-- **Crypto test coverage expanded** - Added 9 new tests and 3 benchmarks to crypto_test.go
-  - New edge case tests: very long passphrases (1KB), special characters (unicode, control chars, whitespace)
-  - Large payload test: 1MB plaintext encryption/decryption
-  - Performance benchmarks: BenchmarkEncrypt, BenchmarkDecrypt, BenchmarkDeriveKey
-  - Tests verify unicode emoji passphrases, null bytes, and whitespace-only passphrases
-  - Validates passphrase modification detection works correctly
-- Test count increased to 565 tests (up from 559)
+- **Crypto test coverage expanded** - Added 6 new edge case tests to crypto_test.go
+  - TestEncryptVeryLongPassphrase: tests 1KB passphrases
+  - TestEncryptSpecialCharacters: 4 subtests for unicode, control chars, whitespace-only passphrases
+  - TestEncryptVeryLargePlaintext: tests 1MB payload encryption/decryption
+  - Tests verify unicode emoji passphrases (🔐🔑🛡️⚡), null bytes, and passphrase modification detection
+- Test count increased to 562 tests (up from 559)
 
 ## [0.7.3] - 2025-12-03
 
