@@ -11,7 +11,7 @@
 [![Dependabot](https://img.shields.io/badge/Dependabot-enabled-brightgreen?logo=dependabot)](https://github.com/blackwell-systems/pipeboard/security/dependabot)
 [![Release](https://img.shields.io/github/v/release/blackwell-systems/pipeboard)](https://github.com/blackwell-systems/pipeboard/releases)
 
-[![Tests](https://img.shields.io/badge/tests-540-success)](https://github.com/blackwell-systems/pipeboard)
+[![Tests](https://img.shields.io/badge/tests-555-success)](https://github.com/blackwell-systems/pipeboard)
 [![codecov](https://codecov.io/gh/blackwell-systems/pipeboard/branch/main/graph/badge.svg)](https://codecov.io/gh/blackwell-systems/pipeboard)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](https://github.com/blackwell-systems/pipeboard/issues)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)

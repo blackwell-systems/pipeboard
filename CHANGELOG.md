@@ -36,7 +36,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Tests with various data sizes (empty, small, medium, large)
 
 ### Changed
-- Test coverage increased to 540 tests
+- Test coverage increased to 555 tests
+- Improved remote.go test coverage with 15 new tests:
+  - S3 backend encryption validation (passphrase required)
+  - Non-retryable errors (NoSuchKey, AccessDenied, InvalidAccessKeyId)
+  - SlotPayload with ExpiresAt field
+  - Local backend configuration
+  - Retry exhaustion error messages
+  - Binary MIME type detection (PDF, GIF, ZIP)
+  - Empty data compression
 - Improved peer.go test coverage with 6 new tests for error paths:
   - Too many arguments validation for cmdSend, cmdRecv, cmdPeek
   - No config file error handling for cmdSend, cmdRecv, cmdPeek
