@@ -125,16 +125,23 @@ func cmdSlots(args []string) error {
 			SizeHuman string `json:"size_human"`
 			CreatedAt string `json:"created_at"`
 			Age       string `json:"age"`
+			ExpiresAt string `json:"expires_at,omitempty"`
+			ExpiresIn string `json:"expires_in,omitempty"`
 		}
 		jsonSlots := make([]jsonSlot, len(slots))
 		for i, s := range slots {
-			jsonSlots[i] = jsonSlot{
+			js := jsonSlot{
 				Name:      s.Name,
 				Size:      s.Size,
 				SizeHuman: formatSize(s.Size),
 				CreatedAt: s.CreatedAt.Format("2006-01-02T15:04:05Z07:00"),
 				Age:       formatAge(s.CreatedAt),
 			}
+			if !s.ExpiresAt.IsZero() {
+				js.ExpiresAt = s.ExpiresAt.Format("2006-01-02T15:04:05Z07:00")
+				js.ExpiresIn = formatTimeUntil(s.ExpiresAt)
+			}
+			jsonSlots[i] = js
 		}
 		out, err := json.MarshalIndent(jsonSlots, "", "  ")
 		if err != nil {
@@ -144,15 +151,41 @@ func cmdSlots(args []string) error {
 		return nil
 	}
 
+	// Check if any slots have expiry
+	hasExpiry := false
+	for _, s := range slots {
+		if !s.ExpiresAt.IsZero() {
+			hasExpiry = true
+			break
+		}
+	}
+
 	// Print header
-	fmt.Printf("%-20s  %-10s  %-12s\n", "NAME", "SIZE", "AGE")
+	if hasExpiry {
+		fmt.Printf("%-20s  %-10s  %-12s  %-12s\n", "NAME", "SIZE", "AGE", "EXPIRES")
+	} else {
+		fmt.Printf("%-20s  %-10s  %-12s\n", "NAME", "SIZE", "AGE")
+	}
 
 	for _, s := range slots {
-		fmt.Printf("%-20s  %-10s  %-12s\n",
-			s.Name,
-			formatSize(s.Size),
-			formatAge(s.CreatedAt),
-		)
+		if hasExpiry {
+			expires := "-"
+			if !s.ExpiresAt.IsZero() {
+				expires = formatTimeUntil(s.ExpiresAt)
+			}
+			fmt.Printf("%-20s  %-10s  %-12s  %-12s\n",
+				s.Name,
+				formatSize(s.Size),
+				formatAge(s.CreatedAt),
+				expires,
+			)
+		} else {
+			fmt.Printf("%-20s  %-10s  %-12s\n",
+				s.Name,
+				formatSize(s.Size),
+				formatAge(s.CreatedAt),
+			)
+		}
 	}
 
 	return nil

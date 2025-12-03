@@ -98,6 +98,7 @@ type RemoteSlot struct {
 	Name      string
 	Size      int64
 	CreatedAt time.Time
+	ExpiresAt time.Time // Zero value means no expiry
 	Hostname  string
 }
 
@@ -349,6 +350,10 @@ func (b *S3Backend) Pull(slot string) ([]byte, map[string]string, error) {
 func (b *S3Backend) List() ([]RemoteSlot, error) {
 	ctx := context.Background()
 
+	// Note: Unlike LocalBackend, we don't check expiry here because it would
+	// require fetching each object's content (expensive S3 GET requests).
+	// Expired slots are cleaned up lazily on Pull() instead.
+
 	// Use paginator to handle more than 1000 objects
 	paginator := s3.NewListObjectsV2Paginator(b.client, &s3.ListObjectsV2Input{
 		Bucket: aws.String(b.bucket),
@@ -432,4 +437,23 @@ func formatAge(t time.Time) string {
 		return fmt.Sprintf("%dh ago", int(d.Hours()))
 	}
 	return fmt.Sprintf("%dd ago", int(d.Hours()/24))
+}
+
+// formatTimeUntil returns a human-readable time until string
+func formatTimeUntil(t time.Time) string {
+	d := time.Until(t)
+
+	if d < 0 {
+		return "expired"
+	}
+	if d < time.Minute {
+		return fmt.Sprintf("%ds", int(d.Seconds()))
+	}
+	if d < time.Hour {
+		return fmt.Sprintf("%dm", int(d.Minutes()))
+	}
+	if d < 24*time.Hour {
+		return fmt.Sprintf("%dh", int(d.Hours()))
+	}
+	return fmt.Sprintf("%dd", int(d.Hours()/24))
 }

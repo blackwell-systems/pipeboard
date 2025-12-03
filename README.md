@@ -97,6 +97,7 @@ Run `pipeboard doctor` to check your setup.
 
 **📚 [Complete Documentation Site](https://blackwell-systems.github.io/pipeboard/)**
 
+- [Test Drive](TESTDRIVE.md) — Try pipeboard without installing (Docker)
 - [Getting Started](docs/getting-started.md) — Installation and first commands
 - [Commands](docs/commands.md) — Full command reference
 - [Transforms](docs/transforms.md) — Build clipboard pipelines

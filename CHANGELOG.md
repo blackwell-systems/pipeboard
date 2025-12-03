@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.3] - 2025-12-03
+
+### Changed
+- **Slots TTL enforcement improved** - Expired slots are now filtered from listing instead of showing stale entries
+  - `pipeboard slots` no longer shows expired slots
+  - Proactive cleanup: expired slots are automatically deleted during list operations
+  - Expiry date column added to `slots` output showing time remaining
+- Test coverage increased to 559 tests (up from 555)
+  - 4 new tests for TTL filtering in LocalBackend.List()
+
 ## [0.7.2] - 2025-12-02
 
 ### Added
@@ -200,7 +210,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - SSH transport for peer sync
 - Optional S3 server-side encryption (AES256/KMS)
 
-[Unreleased]: https://github.com/blackwell-systems/pipeboard/compare/v0.7.1...HEAD
+[Unreleased]: https://github.com/blackwell-systems/pipeboard/compare/v0.7.3...HEAD
+[0.7.3]: https://github.com/blackwell-systems/pipeboard/compare/v0.7.2...v0.7.3
+[0.7.2]: https://github.com/blackwell-systems/pipeboard/compare/v0.7.1...v0.7.2
 [0.7.1]: https://github.com/blackwell-systems/pipeboard/compare/v0.7.0...v0.7.1
 [0.7.0]: https://github.com/blackwell-systems/pipeboard/compare/v0.6.0...v0.7.0
 [0.6.0]: https://github.com/blackwell-systems/pipeboard/compare/v0.5.1...v0.6.0

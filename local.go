@@ -194,6 +194,8 @@ func (b *LocalBackend) List() ([]RemoteSlot, error) {
 	}
 
 	var slots []RemoteSlot
+	var expiredSlots []string
+
 	for _, entry := range entries {
 		if entry.IsDir() {
 			continue
@@ -211,11 +213,36 @@ func (b *LocalBackend) List() ([]RemoteSlot, error) {
 			continue
 		}
 
+		// Read slot file to check expiry
+		var expiresAt time.Time
+		slotPath := b.slotPath(slotName)
+		if jsonData, err := os.ReadFile(slotPath); err == nil {
+			var payload SlotPayload
+			if err := json.Unmarshal(jsonData, &payload); err == nil {
+				if payload.ExpiresAt != "" {
+					if t, err := time.Parse(time.RFC3339, payload.ExpiresAt); err == nil {
+						expiresAt = t
+						// Check if expired
+						if time.Now().UTC().After(expiresAt) {
+							expiredSlots = append(expiredSlots, slotName)
+							continue // Skip expired slots
+						}
+					}
+				}
+			}
+		}
+
 		slots = append(slots, RemoteSlot{
 			Name:      slotName,
 			Size:      info.Size(),
 			CreatedAt: info.ModTime(),
+			ExpiresAt: expiresAt,
 		})
+	}
+
+	// Proactively clean up expired slots
+	for _, slot := range expiredSlots {
+		_ = b.Delete(slot)
 	}
 
 	return slots, nil
