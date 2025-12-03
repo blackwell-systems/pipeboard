@@ -90,19 +90,25 @@ The script will automatically:
 
 The test creates an isolated environment with:
 
-```
-┌─────────────────────────────────────────────┐
-│         pipeboard-test (Docker network)      │
-│                                              │
-│  ┌──────────────┐      ┌──────────────┐    │
-│  │   sender     │◄────►│  receiver    │    │
-│  ├──────────────┤      ├──────────────┤    │
-│  │ SSH server   │      │ SSH server   │    │
-│  │ Xvfb :99     │      │ Xvfb :99     │    │
-│  │ xclip        │      │ xclip        │    │
-│  │ pipeboard    │      │ pipeboard    │    │
-│  └──────────────┘      └──────────────┘    │
-└─────────────────────────────────────────────┘
+```mermaid
+graph TB
+    subgraph NET["pipeboard-test (Docker network)"]
+        subgraph SENDER["sender"]
+            S1[SSH server]
+            S2[Xvfb :99]
+            S3[xclip]
+            S4[pipeboard]
+        end
+
+        subgraph RECEIVER["receiver"]
+            R1[SSH server]
+            R2[Xvfb :99]
+            R3[xclip]
+            R4[pipeboard]
+        end
+
+        SENDER <-->|SSH| RECEIVER
+    end
 ```
 
 #### Implementation Details
