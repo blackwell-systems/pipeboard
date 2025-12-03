@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Changed
+- **Crypto test coverage expanded** - Added 9 new tests and 3 benchmarks to crypto_test.go
+  - New edge case tests: very long passphrases (1KB), special characters (unicode, control chars, whitespace)
+  - Large payload test: 1MB plaintext encryption/decryption
+  - Performance benchmarks: BenchmarkEncrypt, BenchmarkDecrypt, BenchmarkDeriveKey
+  - Tests verify unicode emoji passphrases, null bytes, and whitespace-only passphrases
+  - Validates passphrase modification detection works correctly
+- Test count increased to 565 tests (up from 559)
+
 ## [0.7.3] - 2025-12-03
 
 ### Changed

@@ -266,3 +266,138 @@ func TestDecryptWrongPassphraseErrorMessage(t *testing.T) {
 		t.Errorf("expected 'decryption failed' error, got: %v", err)
 	}
 }
+
+// TestEncryptVeryLongPassphrase tests encryption with extremely long passphrase
+func TestEncryptVeryLongPassphrase(t *testing.T) {
+	plaintext := []byte("test data")
+	// 1KB passphrase
+	longPassphrase := string(bytes.Repeat([]byte("a"), 1024))
+
+	encrypted, err := encrypt(plaintext, longPassphrase)
+	if err != nil {
+		t.Fatalf("encrypt() with long passphrase failed: %v", err)
+	}
+
+	decrypted, err := decrypt(encrypted, longPassphrase)
+	if err != nil {
+		t.Fatalf("decrypt() with long passphrase failed: %v", err)
+	}
+
+	if !bytes.Equal(decrypted, plaintext) {
+		t.Error("decrypted data doesn't match original with long passphrase")
+	}
+}
+
+// TestEncryptSpecialCharacters tests encryption with passphrases containing special characters
+func TestEncryptSpecialCharacters(t *testing.T) {
+	tests := []struct {
+		name       string
+		passphrase string
+	}{
+		{
+			name:       "control characters",
+			passphrase: "test\n\r\t\x00pass",
+		},
+		{
+			name:       "unicode symbols",
+			passphrase: "🔐🔑🛡️⚡",
+		},
+		{
+			name:       "mixed unicode",
+			passphrase: "パスワード123!@#$%^&*()",
+		},
+		{
+			name:       "whitespace only",
+			passphrase: "   \t\n   ",
+		},
+	}
+
+	plaintext := []byte("sensitive data")
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			encrypted, err := encrypt(plaintext, tt.passphrase)
+			if err != nil {
+				t.Fatalf("encrypt() failed: %v", err)
+			}
+
+			decrypted, err := decrypt(encrypted, tt.passphrase)
+			if err != nil {
+				t.Fatalf("decrypt() failed: %v", err)
+			}
+
+			if !bytes.Equal(decrypted, plaintext) {
+				t.Error("decrypted data doesn't match original")
+			}
+
+			// Verify wrong passphrase still fails
+			_, err = decrypt(encrypted, tt.passphrase+"x")
+			if err == nil {
+				t.Error("decrypt with modified passphrase should fail")
+			}
+		})
+	}
+}
+
+// TestEncryptVeryLargePlaintext tests encryption with large payloads
+func TestEncryptVeryLargePlaintext(t *testing.T) {
+	// Test with 1MB of data
+	largeData := bytes.Repeat([]byte("x"), 1024*1024)
+	passphrase := "test-pass"
+
+	encrypted, err := encrypt(largeData, passphrase)
+	if err != nil {
+		t.Fatalf("encrypt() with large data failed: %v", err)
+	}
+
+	decrypted, err := decrypt(encrypted, passphrase)
+	if err != nil {
+		t.Fatalf("decrypt() with large data failed: %v", err)
+	}
+
+	if !bytes.Equal(decrypted, largeData) {
+		t.Error("decrypted large data doesn't match original")
+	}
+}
+
+// Benchmark tests
+func BenchmarkEncrypt(b *testing.B) {
+	plaintext := bytes.Repeat([]byte("benchmark data "), 100)
+	passphrase := "benchmark-pass"
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_, err := encrypt(plaintext, passphrase)
+		if err != nil {
+			b.Fatalf("encrypt() error: %v", err)
+		}
+	}
+}
+
+func BenchmarkDecrypt(b *testing.B) {
+	plaintext := bytes.Repeat([]byte("benchmark data "), 100)
+	passphrase := "benchmark-pass"
+
+	encrypted, err := encrypt(plaintext, passphrase)
+	if err != nil {
+		b.Fatalf("encrypt() error: %v", err)
+	}
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_, err := decrypt(encrypted, passphrase)
+		if err != nil {
+			b.Fatalf("decrypt() error: %v", err)
+		}
+	}
+}
+
+func BenchmarkDeriveKey(b *testing.B) {
+	passphrase := "benchmark-passphrase"
+	salt := []byte("0123456789abcdef")
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_ = deriveKey(passphrase, salt)
+	}
+}
