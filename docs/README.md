@@ -35,9 +35,9 @@ pipeboard keeps everything in the terminal:
 | Redact secrets before sharing with LLMs | Manual find-and-replace | `pipeboard fx redact-secrets` |
 | Screenshot to clipboard | Platform-specific tools | `pipeboard paste --image > out.png` |
 
-## Four Pillars
+## Features
 
-### 1. Unified Clipboard
+### Unified Clipboard
 
 One CLI that works everywhere. No more remembering `pbcopy` vs `xclip` vs `xsel` vs `wl-copy` vs `clip.exe`.
 
@@ -60,7 +60,7 @@ cat screenshot.png | pipeboard copy --image
 pipeboard paste --image > clipboard.png
 ```
 
-### 2. SSH Peer Sync
+### SSH Peer Sync
 
 Send clipboard directly between machines over SSH—no cloud, no intermediary.
 
@@ -73,7 +73,7 @@ pipeboard watch dev   # real-time bidirectional sync
 
 Requires pipeboard installed on both machines. See [Sync & Remote](sync.md) for setup.
 
-### 3. S3 Remote Slots
+### S3 Remote Slots
 
 Named, persistent clipboard storage for async workflows. Client-side AES-256-GCM encryption.
 
@@ -97,7 +97,7 @@ pipeboard pull kube
 pipeboard paste > ~/.kube/config
 ```
 
-### 4. Programmable Transforms
+### Programmable Transforms
 
 User-defined pipelines to process clipboard in-place. Chain multiple transforms.
 
@@ -198,6 +198,7 @@ See [Platforms](platforms.md) for platform-specific details.
 
 ## Documentation
 
+- [Test Drive](https://github.com/blackwell-systems/pipeboard/blob/main/TESTDRIVE.md) — Try pipeboard without installing (Docker)
 - [Getting Started](getting-started.md) — Installation and first commands
 - [Commands](commands.md) — Full command reference with all flags
 - [Transforms](transforms.md) — Build your own clipboard pipelines

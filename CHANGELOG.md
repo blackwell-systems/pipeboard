@@ -14,6 +14,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Full duplicate detection** - Skip duplicate content with `history.no_duplicates` config option
   - When enabled, checks all history entries (not just most recent)
   - Prevents storing the same content multiple times
+- **Interactive demo environment** - Try pipeboard without installing via `./scripts/demo.sh`
+  - Two Docker containers with pipeboard pre-configured
+  - Pre-populated clipboard history and encrypted example slots
+  - 14 example transforms (pretty-json, base64, sha256, etc.)
+  - Welcome message with guided examples
+  - See `TESTDRIVE.md` for full documentation
 - **SSH peer integration test** - Automated Docker-based test infrastructure in `scripts/test-ssh-peer.sh`
   - Tests bidirectional clipboard sync over SSH using Alpine containers
   - Includes xclip wrapper for headless clipboard access via Xvfb

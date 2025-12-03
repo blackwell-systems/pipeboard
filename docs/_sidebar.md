@@ -2,6 +2,7 @@
 
 - **Getting Started**
   - [Home](/)
+  - [Test Drive](https://github.com/blackwell-systems/pipeboard/blob/main/TESTDRIVE.md)
   - [Quick Start](getting-started.md)
   - [Installation](getting-started.md#installation)
 
