@@ -24,7 +24,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Tests with various data sizes (empty, small, medium, large)
 
 ### Changed
-- Test coverage increased to 500+ tests (400 test functions, up from 471 test runs)
+- Test coverage increased to 522 tests
+- Improved peer.go test coverage with 6 new tests for error paths:
+  - Too many arguments validation for cmdSend, cmdRecv, cmdPeek
+  - No config file error handling for cmdSend, cmdRecv, cmdPeek
 - Improved watch.go test coverage with tests for `readRemoteClipboard()` and `sendToRemote()`
 - Improved clipboard.go test coverage with 14 new tests for core clipboard functions
 - Improved history.go test coverage with 29 new tests for error paths and edge cases:
