@@ -6,11 +6,22 @@ import (
 	"os"
 )
 
+// resolveSlotName resolves slot aliases to full slot names.
+// If no alias exists, returns the original name.
+func resolveSlotName(name string) string {
+	cfg, err := loadConfigForAliases()
+	if err != nil {
+		debugLog("failed to load config for aliases: %v", err)
+		return name
+	}
+	return cfg.resolveAlias(name)
+}
+
 func cmdPush(args []string) error {
 	if len(args) != 1 {
 		return fmt.Errorf("usage: pipeboard push <name>")
 	}
-	slot := args[0]
+	slot := resolveSlotName(args[0])
 
 	// Read from local clipboard
 	data, err := readClipboard()
@@ -41,7 +52,7 @@ func cmdPull(args []string) error {
 	if len(args) != 1 {
 		return fmt.Errorf("usage: pipeboard pull <name>")
 	}
-	slot := args[0]
+	slot := resolveSlotName(args[0])
 
 	backend, err := newRemoteBackendFromConfig()
 	if err != nil {
@@ -71,7 +82,7 @@ func cmdShow(args []string) error {
 	if len(args) != 1 {
 		return fmt.Errorf("usage: pipeboard show <name>")
 	}
-	slot := args[0]
+	slot := resolveSlotName(args[0])
 
 	backend, err := newRemoteBackendFromConfig()
 	if err != nil {
@@ -195,7 +206,7 @@ func cmdRm(args []string) error {
 	if len(args) != 1 {
 		return fmt.Errorf("usage: pipeboard rm <name>")
 	}
-	slot := args[0]
+	slot := resolveSlotName(args[0])
 
 	backend, err := newRemoteBackendFromConfig()
 	if err != nil {

@@ -967,3 +967,166 @@ func TestValidateSyncConfigLocalBackend(t *testing.T) {
 		t.Error("local backend should auto-create Local config")
 	}
 }
+
+// TestResolveAlias tests the alias resolution functionality
+func TestResolveAlias(t *testing.T) {
+	t.Run("resolves existing alias", func(t *testing.T) {
+		cfg := &Config{
+			Aliases: map[string]string{
+				"k":   "kube-config",
+				"p":   "prod-secrets",
+				"aws": "aws-credentials",
+			},
+		}
+
+		if got := cfg.resolveAlias("k"); got != "kube-config" {
+			t.Errorf("resolveAlias(k) = %q, want %q", got, "kube-config")
+		}
+		if got := cfg.resolveAlias("p"); got != "prod-secrets" {
+			t.Errorf("resolveAlias(p) = %q, want %q", got, "prod-secrets")
+		}
+		if got := cfg.resolveAlias("aws"); got != "aws-credentials" {
+			t.Errorf("resolveAlias(aws) = %q, want %q", got, "aws-credentials")
+		}
+	})
+
+	t.Run("returns original for non-existent alias", func(t *testing.T) {
+		cfg := &Config{
+			Aliases: map[string]string{
+				"k": "kube-config",
+			},
+		}
+
+		if got := cfg.resolveAlias("other"); got != "other" {
+			t.Errorf("resolveAlias(other) = %q, want %q", got, "other")
+		}
+	})
+
+	t.Run("returns original when aliases is nil", func(t *testing.T) {
+		cfg := &Config{
+			Aliases: nil,
+		}
+
+		if got := cfg.resolveAlias("anything"); got != "anything" {
+			t.Errorf("resolveAlias(anything) = %q, want %q", got, "anything")
+		}
+	})
+
+	t.Run("returns original when aliases is empty", func(t *testing.T) {
+		cfg := &Config{
+			Aliases: map[string]string{},
+		}
+
+		if got := cfg.resolveAlias("test"); got != "test" {
+			t.Errorf("resolveAlias(test) = %q, want %q", got, "test")
+		}
+	})
+}
+
+// TestLoadConfigForAliases tests loading config for alias resolution
+func TestLoadConfigForAliases(t *testing.T) {
+	t.Run("loads aliases from config file", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		configFile := filepath.Join(tmpDir, "config.yaml")
+
+		configContent := `aliases:
+  k: kube-config
+  p: prod-secrets
+  db: database-creds
+`
+		if err := os.WriteFile(configFile, []byte(configContent), 0644); err != nil {
+			t.Fatalf("failed to write config file: %v", err)
+		}
+
+		orig := os.Getenv("PIPEBOARD_CONFIG")
+		defer restoreEnv("PIPEBOARD_CONFIG", orig)
+
+		_ = os.Setenv("PIPEBOARD_CONFIG", configFile)
+
+		cfg, err := loadConfigForAliases()
+		if err != nil {
+			t.Fatalf("loadConfigForAliases() error: %v", err)
+		}
+
+		if cfg.Aliases == nil {
+			t.Fatal("Aliases should not be nil")
+		}
+		if len(cfg.Aliases) != 3 {
+			t.Errorf("expected 3 aliases, got %d", len(cfg.Aliases))
+		}
+		if cfg.Aliases["k"] != "kube-config" {
+			t.Errorf("expected alias k=kube-config, got %s", cfg.Aliases["k"])
+		}
+	})
+
+	t.Run("returns empty config for missing file", func(t *testing.T) {
+		orig := os.Getenv("PIPEBOARD_CONFIG")
+		defer restoreEnv("PIPEBOARD_CONFIG", orig)
+
+		_ = os.Setenv("PIPEBOARD_CONFIG", "/nonexistent/path/config.yaml")
+
+		cfg, err := loadConfigForAliases()
+		if err != nil {
+			t.Fatalf("loadConfigForAliases() should not error on missing file: %v", err)
+		}
+		if cfg == nil {
+			t.Error("Config should not be nil")
+		}
+	})
+
+	t.Run("errors on invalid YAML", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		configFile := filepath.Join(tmpDir, "config.yaml")
+
+		if err := os.WriteFile(configFile, []byte("invalid: [yaml"), 0644); err != nil {
+			t.Fatalf("failed to write config file: %v", err)
+		}
+
+		orig := os.Getenv("PIPEBOARD_CONFIG")
+		defer restoreEnv("PIPEBOARD_CONFIG", orig)
+
+		_ = os.Setenv("PIPEBOARD_CONFIG", configFile)
+
+		_, err := loadConfigForAliases()
+		if err == nil {
+			t.Error("expected error for invalid YAML")
+		}
+	})
+}
+
+// TestLoadConfigWithAliases tests full config loading includes aliases
+func TestLoadConfigWithAliases(t *testing.T) {
+	tmpDir := t.TempDir()
+	configFile := filepath.Join(tmpDir, "config.yaml")
+
+	configContent := `version: 1
+sync:
+  backend: local
+aliases:
+  k: kube-config
+  p: prod-secrets
+`
+	if err := os.WriteFile(configFile, []byte(configContent), 0644); err != nil {
+		t.Fatalf("failed to write config file: %v", err)
+	}
+
+	orig := os.Getenv("PIPEBOARD_CONFIG")
+	defer restoreEnv("PIPEBOARD_CONFIG", orig)
+
+	_ = os.Setenv("PIPEBOARD_CONFIG", configFile)
+
+	cfg, err := loadConfig()
+	if err != nil {
+		t.Fatalf("loadConfig() error: %v", err)
+	}
+
+	if cfg.Aliases == nil {
+		t.Fatal("Aliases should not be nil")
+	}
+	if cfg.Aliases["k"] != "kube-config" {
+		t.Errorf("expected alias k=kube-config, got %s", cfg.Aliases["k"])
+	}
+	if cfg.Aliases["p"] != "prod-secrets" {
+		t.Errorf("expected alias p=prod-secrets, got %s", cfg.Aliases["p"])
+	}
+}

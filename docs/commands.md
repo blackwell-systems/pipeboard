@@ -177,6 +177,16 @@ Monitors both local and remote clipboards and automatically syncs changes in bot
 
 ## S3 Remote Slots
 
+All slot commands support **aliases**. Define shortcuts in your config:
+
+```yaml
+aliases:
+  k: kube-config
+  p: prod-secrets
+```
+
+Then use the short name: `pipeboard pull k` → pulls from "kube-config"
+
 ### push
 
 Push clipboard to a named remote slot.
@@ -184,6 +194,7 @@ Push clipboard to a named remote slot.
 ```bash
 pipeboard push myslot
 pipeboard push kube-config
+pipeboard push k              # uses alias
 ```
 
 ### pull
