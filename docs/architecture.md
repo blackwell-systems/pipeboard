@@ -330,38 +330,6 @@ flowchart TD
     D --> L[Return Error Message]
 ```
 
-## Key Design Decisions
-
-### 1. Slot-Based Storage
-Instead of a single clipboard history, pipeboard uses named "slots" for organized clipboard management. This allows:
-- Categorization (work vs personal)
-- Long-term storage
-- Easy retrieval by name
-
-### 2. Transform Pipeline
-Transforms are composable and can be chained. This enables:
-- Reusable data processing
-- Custom workflows
-- Plugin-like extensibility
-
-### 3. P2P Sync
-Direct machine-to-machine transfer via SSH reduces cloud dependencies:
-- No intermediary storage required
-- Lower latency
-- Privacy-focused
-
-### 4. Encryption by Default
-All stored data is encrypted before writing to disk or network:
-- AES-256 encryption
-- User-controlled keys
-- Zero-knowledge architecture
-
-### 5. Platform Abstraction
-Unified clipboard API regardless of OS:
-- Automatic platform detection
-- Graceful fallbacks
-- Consistent behavior across platforms
-
 ## Performance Characteristics
 
 | Operation | Typical Latency |
