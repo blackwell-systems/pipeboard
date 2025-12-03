@@ -24,10 +24,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Tests with various data sizes (empty, small, medium, large)
 
 ### Changed
-- Test coverage increased to 522 tests
+- Test coverage increased to 534 tests
 - Improved peer.go test coverage with 6 new tests for error paths:
   - Too many arguments validation for cmdSend, cmdRecv, cmdPeek
   - No config file error handling for cmdSend, cmdRecv, cmdPeek
+- Improved crypto.go test coverage with 6 new tests:
+  - Corrupted salt/nonce handling
+  - Boundary length validation
+  - Error message verification
+- Improved config.go test coverage with 6 new tests:
+  - Missing SSH field in getPeer
+  - Missing cmd/shell in getFx
+  - Invalid YAML parsing for all config loaders
+  - Local backend validation
 - Improved watch.go test coverage with tests for `readRemoteClipboard()` and `sendToRemote()`
 - Improved clipboard.go test coverage with 14 new tests for core clipboard functions
 - Improved history.go test coverage with 29 new tests for error paths and edge cases:

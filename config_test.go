@@ -851,3 +851,119 @@ func TestValidateSyncConfigNilS3(t *testing.T) {
 		t.Error("expected error for nil S3 config with s3 backend")
 	}
 }
+
+// TestGetPeerMissingSSH tests getPeer when SSH field is empty
+func TestGetPeerMissingSSH(t *testing.T) {
+	cfg := &Config{
+		Peers: map[string]PeerConfig{
+			"broken": {SSH: "", RemoteCmd: "pipeboard"},
+		},
+	}
+
+	_, err := cfg.getPeer("broken")
+	if err == nil {
+		t.Error("expected error for peer with missing SSH")
+	}
+	if err.Error() != "peer \"broken\" is missing 'ssh' field" {
+		t.Errorf("unexpected error message: %v", err)
+	}
+}
+
+// TestGetFxMissingCmdAndShell tests getFx when transform has neither cmd nor shell
+func TestGetFxMissingCmdAndShell(t *testing.T) {
+	cfg := &Config{
+		Fx: map[string]FxConfig{
+			"broken": {Description: "No command defined"},
+		},
+	}
+
+	_, err := cfg.getFx("broken")
+	if err == nil {
+		t.Error("expected error for transform with no cmd or shell")
+	}
+	if err.Error() != "transform \"broken\" has no 'cmd' or 'shell' defined" {
+		t.Errorf("unexpected error message: %v", err)
+	}
+}
+
+// TestLoadConfigForFxInvalidYAML tests loadConfigForFx with invalid YAML
+func TestLoadConfigForFxInvalidYAML(t *testing.T) {
+	tmpDir := t.TempDir()
+	configFile := filepath.Join(tmpDir, "config.yaml")
+
+	// Write invalid YAML
+	if err := os.WriteFile(configFile, []byte("invalid: [yaml"), 0644); err != nil {
+		t.Fatalf("failed to write config file: %v", err)
+	}
+
+	orig := os.Getenv("PIPEBOARD_CONFIG")
+	defer restoreEnv("PIPEBOARD_CONFIG", orig)
+
+	_ = os.Setenv("PIPEBOARD_CONFIG", configFile)
+
+	_, err := loadConfigForFx()
+	if err == nil {
+		t.Error("expected error for invalid YAML")
+	}
+}
+
+// TestLoadConfigForPeersInvalidYAML tests loadConfigForPeers with invalid YAML
+func TestLoadConfigForPeersInvalidYAML(t *testing.T) {
+	tmpDir := t.TempDir()
+	configFile := filepath.Join(tmpDir, "config.yaml")
+
+	// Write invalid YAML
+	if err := os.WriteFile(configFile, []byte("invalid: [yaml"), 0644); err != nil {
+		t.Fatalf("failed to write config file: %v", err)
+	}
+
+	orig := os.Getenv("PIPEBOARD_CONFIG")
+	defer restoreEnv("PIPEBOARD_CONFIG", orig)
+
+	_ = os.Setenv("PIPEBOARD_CONFIG", configFile)
+
+	_, err := loadConfigForPeers()
+	if err == nil {
+		t.Error("expected error for invalid YAML")
+	}
+}
+
+// TestLoadConfigInvalidYAMLParsing tests loadConfig with invalid YAML
+func TestLoadConfigInvalidYAMLParsing(t *testing.T) {
+	tmpDir := t.TempDir()
+	configFile := filepath.Join(tmpDir, "config.yaml")
+
+	// Write invalid YAML
+	if err := os.WriteFile(configFile, []byte("invalid: [yaml"), 0644); err != nil {
+		t.Fatalf("failed to write config file: %v", err)
+	}
+
+	orig := os.Getenv("PIPEBOARD_CONFIG")
+	defer restoreEnv("PIPEBOARD_CONFIG", orig)
+
+	_ = os.Setenv("PIPEBOARD_CONFIG", configFile)
+
+	_, err := loadConfig()
+	if err == nil {
+		t.Error("expected error for invalid YAML")
+	}
+}
+
+// TestValidateSyncConfigLocalBackend tests local backend validation
+func TestValidateSyncConfigLocalBackend(t *testing.T) {
+	cfg := &Config{
+		Sync: &SyncConfig{
+			Backend: "local",
+		},
+	}
+
+	err := validateSyncConfig(cfg)
+	if err != nil {
+		t.Errorf("local backend should be valid: %v", err)
+	}
+
+	// Should auto-create Local config
+	if cfg.Sync.Local == nil {
+		t.Error("local backend should auto-create Local config")
+	}
+}
