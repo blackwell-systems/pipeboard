@@ -42,6 +42,12 @@ fx:
     cmd: ["base64", "-d"]
     description: "Decode base64"
 
+# Clipboard history
+history:
+  limit: 50              # max entries (default: 20)
+  ttl_days: 30           # auto-delete after 30 days
+  no_duplicates: true    # skip duplicate content
+
 # S3 remote storage
 sync:
   backend: s3
@@ -130,8 +136,20 @@ Clipboard history settings.
 
 ```yaml
 history:
-  limit: 50    # max clipboard history entries (default: 20)
+  limit: 50           # max clipboard history entries (default: 20)
+  ttl_days: 30        # auto-delete entries older than N days (0 = never)
+  no_duplicates: true # skip entries with same content (checks all history)
 ```
+
+**Options:**
+
+| Option | Default | Description |
+|--------|---------|-------------|
+| `limit` | `20` | Maximum number of clipboard history entries to keep |
+| `ttl_days` | `0` | Auto-delete entries older than N days (0 = disabled) |
+| `no_duplicates` | `false` | Skip duplicate content across all history entries |
+
+**Note:** Without `no_duplicates`, pipeboard only checks if new content matches the *most recent* entry. With `no_duplicates: true`, it checks all entries.
 
 ### sync
 
