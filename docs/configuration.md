@@ -42,6 +42,12 @@ fx:
     cmd: ["base64", "-d"]
     description: "Decode base64"
 
+# Slot aliases (shortcuts)
+aliases:
+  k: kube-config
+  p: prod-secrets
+  aws: aws-credentials
+
 # Clipboard history
 history:
   limit: 50              # max entries (default: 20)
@@ -129,6 +135,36 @@ pretty-json:
 strip-ansi:
   shell: "sed 's/\\x1b\\[[0-9;]*m//g'"
 ```
+
+### aliases
+
+Slot name shortcuts for frequently used slots.
+
+```yaml
+aliases:
+  <short>: <full-slot-name>
+```
+
+Example:
+
+```yaml
+aliases:
+  k: kube-config
+  p: prod-secrets
+  aws: aws-credentials
+  db: database-connection-string
+```
+
+Now use short names with any slot command:
+
+```bash
+pipeboard push k       # pushes to "kube-config"
+pipeboard pull p       # pulls from "prod-secrets"
+pipeboard show aws     # shows "aws-credentials"
+pipeboard rm db        # removes "database-connection-string"
+```
+
+**Note:** Aliases only apply to slot commands (`push`, `pull`, `show`, `rm`). The full slot name is always used for storage.
 
 ### history
 
@@ -274,4 +310,25 @@ sync:
   s3:
     bucket: my-bucket
     region: us-west-2
+```
+
+### Just slot aliases
+
+```yaml
+version: 1
+aliases:
+  k: kube-config
+  p: prod-secrets
+```
+
+### Local slots with aliases
+
+```yaml
+version: 1
+sync:
+  backend: local
+aliases:
+  k: kube-config
+  p: prod-secrets
+  aws: aws-credentials
 ```

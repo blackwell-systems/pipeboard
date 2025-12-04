@@ -14,7 +14,8 @@ type Config struct {
 	Sync     *SyncConfig           `yaml:"sync,omitempty"`
 	History  *HistoryConfig        `yaml:"history,omitempty"`
 	Peers    map[string]PeerConfig `yaml:"peers,omitempty"`
-	Fx       map[string]FxConfig   `yaml:"fx,omitempty"` // clipboard transforms
+	Fx       map[string]FxConfig   `yaml:"fx,omitempty"`      // clipboard transforms
+	Aliases  map[string]string     `yaml:"aliases,omitempty"` // slot name shortcuts (e.g., k -> kube-config)
 
 	// Legacy fields for backwards compatibility
 	Backend string    `yaml:"backend,omitempty"`
@@ -329,4 +330,40 @@ func (fx *FxConfig) getCommand() []string {
 		return []string{"sh", "-c", fx.Shell}
 	}
 	return fx.Cmd
+}
+
+// resolveAlias returns the full slot name for an alias, or the original name if no alias exists.
+func (cfg *Config) resolveAlias(name string) string {
+	if cfg.Aliases == nil {
+		return name
+	}
+	if resolved, ok := cfg.Aliases[name]; ok {
+		debugLog("resolved alias %q -> %q", name, resolved)
+		return resolved
+	}
+	return name
+}
+
+// loadConfigForAliases loads config just for alias resolution.
+// Returns empty config if file doesn't exist (no aliases is valid).
+func loadConfigForAliases() (*Config, error) {
+	path := configPath()
+	if path == "" {
+		return &Config{}, nil
+	}
+
+	data, err := os.ReadFile(path)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return &Config{}, nil
+		}
+		return nil, fmt.Errorf("reading config: %w", err)
+	}
+
+	var cfg Config
+	if err := yaml.Unmarshal(data, &cfg); err != nil {
+		return nil, fmt.Errorf("parsing config: %w", err)
+	}
+
+	return &cfg, nil
 }

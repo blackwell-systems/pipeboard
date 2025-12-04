@@ -52,16 +52,8 @@ pipeboard diff --history 1 3
 
 ## Storage & Organization
 
-### Slot Aliases
-Shortcuts for frequently used slots:
-```yaml
-aliases:
-  k: kube-config
-  p: prod-secrets
-```
-```bash
-pipeboard pull k    # expands to kube-config
-```
+### ~~Slot Aliases~~ ✓ Implemented
+Shortcuts for frequently used slots. See [Configuration](configuration.md#aliases).
 
 ### Clipboard Templates
 Parameterized templates with placeholders:
@@ -125,8 +117,32 @@ webhooks:
 ### Browser Extension
 Sync browser clipboard with pipeboard. Copy in browser, paste in terminal.
 
-### Mobile Apps
-iOS/Android apps for clipboard access on the go. Push from phone, pull on laptop.
+### Mobile Apps (iOS & Android)
+
+Native mobile apps for clipboard access on the go. **Planned as paid apps** while the CLI remains MIT-licensed.
+
+**Core features (MVP):**
+- Push/pull from S3 slots
+- List and delete slots
+- AES-256 decryption (same as CLI)
+- Slot aliases support
+- Local history on device
+
+**Not planned for mobile:**
+- Shell transforms (no shell on iOS/Android)
+- SSH peer sync (complex, niche use case)
+- Watch mode (iOS background limitations)
+
+**Technical approach:**
+- Swift/SwiftUI for iOS, Kotlin for Android
+- AWS SDK for S3 operations
+- Shared crypto logic (port Go encryption to Swift/Kotlin)
+- BYOB model—users provide their own S3 bucket
+
+**Monetization:**
+- One-time purchase ($6.99–9.99)
+- No subscription, no SaaS infrastructure needed
+- CLI remains free and open source
 
 ### IDE Integration
 VS Code / JetBrains plugins for direct slot access from editor.

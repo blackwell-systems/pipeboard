@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Slot aliases** - Define shortcuts for frequently used slot names
+  - Configure in `aliases` section of config.yaml
+  - Use short names with push/pull/show/rm: `pipeboard pull k` → pulls from "kube-config"
+  - Example: `aliases: { k: kube-config, p: prod-secrets }`
+
 ## [0.7.4] - 2025-12-03
 
 ### Fixed
@@ -21,7 +27,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - TestEncryptSpecialCharacters: 4 subtests for unicode, control chars, whitespace-only passphrases
   - TestEncryptVeryLargePlaintext: tests 1MB payload encryption/decryption
   - Tests verify unicode emoji passphrases (🔐🔑🛡️⚡), null bytes, and passphrase modification detection
-- Test count increased to 562 tests (up from 559)
+- Test count increased to 576 tests (up from 562)
+  - 14 new tests for slot aliases (resolveAlias, loadConfigForAliases, config integration)
 
 ## [0.7.3] - 2025-12-03
 
