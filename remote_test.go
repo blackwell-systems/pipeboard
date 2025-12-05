@@ -376,8 +376,10 @@ func TestDetectMIME(t *testing.T) {
 }
 
 func containsMIME(mime, substr string) bool {
-	return len(mime) >= len(substr) && (mime[:len(substr)] == substr || mime == substr ||
-		(len(mime) > len(substr) && mime[:len(substr)+1] == substr+";" || mime == substr))
+	if mime == substr {
+		return true
+	}
+	return strings.HasPrefix(mime, substr+";")
 }
 
 // Test retry with backoff
