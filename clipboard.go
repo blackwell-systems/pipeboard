@@ -104,7 +104,7 @@ func cmdClear(args []string) error {
 	}
 
 	if len(b.ClearCmd) > 0 {
-		return runCommand(b.ClearCmd)
+		return runCommand(b.ClearCmd...)
 	}
 
 	// Fallback: copy empty string
