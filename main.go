@@ -36,6 +36,9 @@ var commands = map[string]func([]string) error{
 	"completion": cmdCompletion,
 	"watch":      cmdWatch,
 	"recall":     cmdRecall,
+	"login":      cmdLogin,
+	"signup":     cmdSignup,
+	"logout":     cmdLogout,
 }
 
 // parseGlobalFlags extracts global flags and returns remaining args

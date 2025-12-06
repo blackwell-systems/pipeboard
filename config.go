@@ -40,12 +40,13 @@ type FxConfig struct {
 }
 
 type SyncConfig struct {
-	Backend    string       `yaml:"backend"`              // "none", "s3", or "local"
-	S3         *S3Config    `yaml:"s3,omitempty"`
-	Local      *LocalConfig `yaml:"local,omitempty"`
-	Encryption string       `yaml:"encryption,omitempty"` // "none" or "aes256"
-	Passphrase string       `yaml:"passphrase,omitempty"` // for client-side encryption
-	TTLDays    int          `yaml:"ttl_days,omitempty"`   // auto-expire slots after N days (0 = never)
+	Backend    string        `yaml:"backend"`              // "none", "s3", "local", or "hosted"
+	S3         *S3Config     `yaml:"s3,omitempty"`
+	Local      *LocalConfig  `yaml:"local,omitempty"`
+	Hosted     *HostedConfig `yaml:"hosted,omitempty"`
+	Encryption string        `yaml:"encryption,omitempty"` // "none" or "aes256"
+	Passphrase string        `yaml:"passphrase,omitempty"` // for client-side encryption
+	TTLDays    int           `yaml:"ttl_days,omitempty"`   // auto-expire slots after N days (0 = never)
 }
 
 type S3Config struct {
@@ -247,6 +248,17 @@ func validateSyncConfig(cfg *Config) error {
 		// Local backend requires no mandatory config (uses defaults)
 		if cfg.Sync.Local == nil {
 			cfg.Sync.Local = &LocalConfig{}
+		}
+	case "hosted":
+		// Hosted backend requires URL and email
+		if cfg.Sync.Hosted == nil {
+			return fmt.Errorf("hosted backend selected but hosted config missing")
+		}
+		if cfg.Sync.Hosted.URL == "" {
+			return fmt.Errorf("hosted.url is required")
+		}
+		if cfg.Sync.Hosted.Email == "" {
+			return fmt.Errorf("hosted.email is required")
 		}
 	default:
 		return fmt.Errorf("unsupported backend: %s", cfg.Sync.Backend)

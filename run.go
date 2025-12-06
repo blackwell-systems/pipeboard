@@ -9,7 +9,7 @@ import (
 	"strings"
 )
 
-func runCommand(cmdParts []string) error {
+func runCommand(cmdParts ...string) error {
 	if len(cmdParts) == 0 {
 		return errors.New("no command configured")
 	}
@@ -18,6 +18,22 @@ func runCommand(cmdParts []string) error {
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	return cmd.Run()
+}
+
+func runCommandOutput(cmdParts ...string) ([]byte, error) {
+	if len(cmdParts) == 0 {
+		return nil, errors.New("no command configured")
+	}
+	cmd := exec.Command(cmdParts[0], cmdParts[1:]...)
+	var out bytes.Buffer
+	cmd.Stdout = &out
+	cmd.Stderr = os.Stderr
+	if err := cmd.Run(); err != nil {
+		return nil, err
+	}
+	// Trim trailing newline
+	output := bytes.TrimSuffix(out.Bytes(), []byte("\n"))
+	return output, nil
 }
 
 func runWithInput(cmdParts []string, data []byte) error {

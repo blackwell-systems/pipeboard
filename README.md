@@ -19,7 +19,7 @@
 
 **The programmable clipboard router for terminals.**
 
-One command across macOS, Linux, Windows, and WSL. Sync between machines via SSH or store in S3. Transform clipboard contents with user-defined pipelines. All with client-side encryption and zero telemetry.
+One command across macOS, Linux, Windows, and WSL. Sync between machines via SSH, store in S3, or sync with mobile devices via hosted backend. Transform clipboard contents with user-defined pipelines. All with client-side encryption and zero telemetry.
 
 ## Why pipeboard?
 
@@ -39,7 +39,7 @@ Terminal users copy and paste hundreds of times a day—config snippets, JSON pa
 |---------|-------------|
 | **Unified clipboard** | One CLI across macOS, Linux, Windows, and WSL |
 | **Peer-to-peer sync** | Direct SSH transfer between machines—no cloud required |
-| **Named slots** | Persistent storage locally or in S3 for async workflows |
+| **Named slots** | Persistent storage locally, in S3, or hosted backend for async workflows |
 | **Transforms** | User-defined pipelines to process clipboard in-place |
 | **History & recall** | Search and restore previous clipboard contents |
 | **Watch mode** | Real-time bidirectional sync with a peer |
@@ -92,7 +92,29 @@ pipeboard push deploy-script
 pipeboard pull deploy-script
 ```
 
-Slots work across networks, time zones, and reboots. Local or S3-backed.
+Slots work across networks, time zones, and reboots. Local, S3-backed, or hosted for mobile sync.
+
+### Sync with mobile devices
+
+Desktop to mobile, mobile to desktop—seamlessly:
+
+```bash
+# One-time setup
+pipeboard signup                  # create account
+pipeboard login                   # authenticate
+
+# Desktop: copy and push
+echo "https://example.com/docs" | pipeboard
+pipeboard push mobile-link
+
+# Mobile: pull from Pipeboard app
+# [Use the Android app to pull "mobile-link" slot]
+
+# Mobile: push from app, desktop: pull
+pipeboard pull mobile-notes       # get what you saved on phone
+```
+
+Hosted backend keeps your clipboard encrypted and synced between CLI and mobile apps.
 
 ### Find and restore anything you copied
 
@@ -112,6 +134,10 @@ Store sensitive data that self-destructs:
 ```yaml
 # ~/.config/pipeboard/config.yaml
 sync:
+  backend: hosted              # or "s3" or "local"
+  hosted:
+    url: https://your-backend.com
+    email: your@email.com
   encryption: aes256
   passphrase: ${PIPEBOARD_PASSPHRASE}
   ttl_days: 1    # auto-delete after 24 hours

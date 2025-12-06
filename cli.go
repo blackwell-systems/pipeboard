@@ -236,6 +236,37 @@ Examples:
   pipeboard history --local          Show clipboard history
   pipeboard recall 1                 Restore most recent entry
   pipeboard recall 3                 Restore third most recent entry`,
+
+	"login": `Usage: pipeboard login
+
+Authenticate with the hosted backend and store the session token.
+Requires hosted backend to be configured in config.yaml.
+
+The token is stored securely:
+  - macOS: Keychain
+  - Linux/Windows: Encrypted file (~/.config/pipeboard/.tokens)
+
+Examples:
+  pipeboard login`,
+
+	"signup": `Usage: pipeboard signup
+
+Create a new account on the hosted backend.
+Requires hosted backend to be configured in config.yaml.
+
+After signup, you'll be automatically logged in and can start
+syncing clipboard between your devices.
+
+Examples:
+  pipeboard signup`,
+
+	"logout": `Usage: pipeboard logout
+
+Clear the stored authentication token for the hosted backend.
+You'll need to run 'pipeboard login' again to use hosted sync.
+
+Examples:
+  pipeboard logout`,
 }
 
 // stdinHasData returns true if stdin is a pipe (not a terminal)
@@ -302,7 +333,12 @@ Direct peer-to-peer (SSH):
   watch [peer]         Real-time bidirectional clipboard sync
                        (peer defaults to 'defaults.peer' in config)
 
-Remote slots (S3 or local backend):
+Authentication (for hosted backend):
+  login                Authenticate with hosted backend
+  signup               Create a new account
+  logout               Clear stored authentication token
+
+Remote slots (S3, local, or hosted backend):
   push <name>          Push clipboard to remote slot
   pull <name>          Pull remote slot into clipboard
   show <name>          Print remote slot to stdout
