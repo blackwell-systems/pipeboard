@@ -7,11 +7,53 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.8.0] - 2025-12-06
+
 ### Added
+- **Hosted backend support** - Sync clipboard between desktop CLI and mobile devices
+  - New `hosted` backend type alongside existing `local` and `s3` backends
+  - Enables bidirectional clipboard sync: Desktop CLI ↔ Hosted Backend ↔ Mobile App
+  - JWT authentication with secure token storage
+  - AES-256-GCM encryption compatible with Android app
+  - Content-Type preservation for images and text
+  - Configuration: `sync.backend: hosted` with `hosted.url` and `hosted.email`
+- **Authentication commands** - User account management for hosted backend
+  - `pipeboard signup` - Create new account with email and password
+  - `pipeboard login` - Authenticate and securely store JWT token
+  - `pipeboard logout` - Clear stored authentication credentials
+  - Password input uses secure terminal prompt (no echo)
+- **Cross-platform token storage** - Secure JWT token persistence
+  - macOS: Keychain integration via `security` command
+  - Linux/Windows: AES-encrypted file storage with machine-specific key
+  - Token location: `~/.config/pipeboard/.tokens` (encrypted) or Keychain
+  - Machine-specific encryption key derived from hostname + username
+- **Mobile device synchronization** - Desktop-to-mobile clipboard workflow
+  - Push clipboard from CLI to mobile: `pipeboard push slot-name`
+  - Pull clipboard from mobile to CLI: `pipeboard pull slot-name`
+  - Same encryption and slot operations as existing backends
+  - HTTP-based API with JWT bearer token authentication
 - **Slot aliases** - Define shortcuts for frequently used slot names
   - Configure in `aliases` section of config.yaml
   - Use short names with push/pull/show/rm: `pipeboard pull k` → pulls from "kube-config"
   - Example: `aliases: { k: kube-config, p: prod-secrets }`
+
+### Changed
+- **Backend validation** - Added hosted backend to config validation
+  - `validateSyncConfig()` now checks `hosted.url` and `hosted.email` requirements
+  - Error messages guide users to correct configuration format
+- **README updated** - Documented hosted backend and mobile sync workflow
+  - Added "Sync with mobile devices" section to Power Workflows
+  - Updated feature table to mention hosted backend
+  - Configuration examples show hosted backend setup
+- **Command help expanded** - Added "Authentication (for hosted backend)" section
+  - `pipeboard help` now lists login/signup/logout commands
+  - Individual command help: `pipeboard login --help`, etc.
+
+### Fixed
+- **Build compatibility** - Fixed variadic args in clipboard operations
+  - `runCommand()` signature updated to accept variadic arguments
+  - `clipboard.go` now uses spread operator: `runCommand(b.ClearCmd...)`
+  - Test vector generator excluded from main build with `//go:build ignore` tag
 
 ## [0.7.4] - 2025-12-03
 
