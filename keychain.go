@@ -81,10 +81,11 @@ func clearTokenKeychain(email string) error {
 }
 
 // File-based implementation (Linux/Windows)
-// Tokens are encrypted with a machine-specific key
+// Tokens are encrypted with a machine-specific key derived from hostname+username.
+// This provides security against token theft if the config dir is copied to another machine.
 
 type tokenStore struct {
-	Tokens map[string]string `json:"tokens"` // email -> encrypted token
+	Tokens map[string]string `json:"tokens"` // Maps email -> base64(encrypted token)
 }
 
 func tokenFilePath() (string, error) {

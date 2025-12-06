@@ -248,7 +248,7 @@ func TestRunWithInputEmptyCommand(t *testing.T) {
 }
 
 func TestRunCommandEmptyCommand(t *testing.T) {
-	err := runCommand([]string{})
+	err := runCommand()
 	if err == nil {
 		t.Error("runCommand with empty command should return error")
 	}
@@ -864,21 +864,21 @@ func TestIsPeerCommand(t *testing.T) {
 // Test runCommand
 func TestRunCommand(t *testing.T) {
 	t.Run("empty command", func(t *testing.T) {
-		err := runCommand([]string{})
+		err := runCommand()
 		if err == nil {
 			t.Error("expected error for empty command")
 		}
 	})
 
 	t.Run("successful command", func(t *testing.T) {
-		err := runCommand([]string{"true"})
+		err := runCommand("true")
 		if err != nil {
 			t.Errorf("unexpected error: %v", err)
 		}
 	})
 
 	t.Run("failing command", func(t *testing.T) {
-		err := runCommand([]string{"false"})
+		err := runCommand("false")
 		if err == nil {
 			t.Error("expected error for failing command")
 		}
@@ -1858,8 +1858,8 @@ func TestHelpMentionsLocalBackend(t *testing.T) {
 	if !strings.Contains(output, "local") {
 		t.Error("help should mention local backend")
 	}
-	if !strings.Contains(output, "S3 or local") {
-		t.Error("help should say 'S3 or local backend'")
+	if !strings.Contains(output, "S3, local, or hosted") {
+		t.Error("help should say 'S3, local, or hosted backend'")
 	}
 }
 

@@ -10,68 +10,79 @@ import (
 	"time"
 )
 
-// HostedConfig contains configuration for the hosted backend
+// HostedConfig contains configuration for the hosted backend.
+// This is the configuration stored in the config.yaml file.
 type HostedConfig struct {
-	URL   string `yaml:"url"`   // Base URL of the mobile backend
-	Email string `yaml:"email"` // User email
-	// Token is stored in keychain, not in config file
+	URL   string `yaml:"url"`   // Base URL of the mobile backend (e.g., https://pipeboard.example.com)
+	Email string `yaml:"email"` // User email for authentication
+	// Token is stored securely in keychain/encrypted file, not in config file
 }
 
-// HostedBackend implements RemoteBackend for the Pipeboard mobile backend
+// HostedBackend implements RemoteBackend for the Pipeboard mobile backend.
+// It provides HTTP-based clipboard sync between desktop CLI and mobile devices.
+// Data is encrypted client-side using AES-256-GCM before transmission.
 type HostedBackend struct {
-	baseURL    string
-	email      string
-	token      string
-	httpClient *http.Client
-	encryption string
-	passphrase string
-	ttlDays    int
+	baseURL    string       // Base URL of the backend API
+	email      string       // User's email address
+	token      string       // JWT authentication token
+	httpClient *http.Client // HTTP client with 30s timeout
+	encryption string       // Encryption mode: "none" or "aes256"
+	passphrase string       // Encryption passphrase (empty if encryption is "none")
+	ttlDays    int          // TTL for slots (0 = never expires)
 }
 
-// API request/response models matching mobile backend
+// API request/response models matching mobile backend API contract
 
+// signupRequest contains user credentials for account creation
 type signupRequest struct {
 	Email    string `json:"email"`
 	Password string `json:"password"`
 }
 
+// loginRequest contains user credentials for authentication
 type loginRequest struct {
 	Email    string `json:"email"`
 	Password string `json:"password"`
 }
 
+// authResponse contains JWT token returned after successful authentication
 type authResponse struct {
-	Token  string `json:"token"`
-	UserID string `json:"user_id"`
-	Email  string `json:"email"`
+	Token  string `json:"token"`   // JWT token for subsequent API requests
+	UserID string `json:"user_id"` // User's unique identifier
+	Email  string `json:"email"`   // Confirmed email address
 }
 
+// slotMetadataResponse contains slot information without the actual data
 type slotMetadataResponse struct {
-	Name        string `json:"name"`
-	ContentType string `json:"content_type"`
-	SizeBytes   int    `json:"size_bytes"`
-	UpdatedAt   string `json:"updated_at"`
+	Name        string `json:"name"`         // Slot name
+	ContentType string `json:"content_type"` // MIME type (e.g., "text/plain", "image/png")
+	SizeBytes   int    `json:"size_bytes"`   // Size of encrypted data
+	UpdatedAt   string `json:"updated_at"`   // ISO 8601 timestamp
 }
 
+// slotDataResponse contains both metadata and the encrypted slot data
 type slotDataResponse struct {
-	Name          string `json:"name"`
-	EncryptedData string `json:"encrypted_data"` // base64
-	ContentType   string `json:"content_type"`
-	SizeBytes     int    `json:"size_bytes"`
-	UpdatedAt     string `json:"updated_at"`
+	Name          string `json:"name"`           // Slot name
+	EncryptedData string `json:"encrypted_data"` // Base64-encoded encrypted payload
+	ContentType   string `json:"content_type"`   // MIME type
+	SizeBytes     int    `json:"size_bytes"`     // Size of encrypted data
+	UpdatedAt     string `json:"updated_at"`     // ISO 8601 timestamp
 }
 
+// newHostedBackend creates a new HostedBackend instance.
+// It retrieves the JWT token from secure storage (keychain or encrypted file).
+// Returns an error if the user is not logged in or if encryption config is invalid.
 func newHostedBackend(cfg *HostedConfig, encryption, passphrase string, ttlDays int) (*HostedBackend, error) {
 	if cfg == nil || cfg.URL == "" {
 		return nil, fmt.Errorf("hosted config is missing or incomplete")
 	}
 
-	// Validate encryption config
+	// Validate encryption config - encryption without passphrase is invalid
 	if encryption == "aes256" && passphrase == "" {
 		return nil, fmt.Errorf("passphrase required when encryption is set to aes256")
 	}
 
-	// Get token from secure storage
+	// Retrieve JWT token from secure storage (Keychain on macOS, encrypted file elsewhere)
 	token, err := getStoredToken(cfg.Email)
 	if err != nil {
 		return nil, fmt.Errorf("not logged in: %w\nRun 'pipeboard login' to authenticate", err)
