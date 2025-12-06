@@ -282,7 +282,7 @@ func (h *HostedBackend) Delete(slot string) error {
 	if resp.StatusCode == 404 {
 		return fmt.Errorf("slot '%s' not found", slot)
 	}
-	if resp.StatusCode != http.StatusOK {
+	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusNoContent {
 		body, _ := io.ReadAll(resp.Body)
 		return fmt.Errorf("delete failed (status %d): %s", resp.StatusCode, string(body))
 	}

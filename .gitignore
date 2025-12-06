@@ -20,3 +20,5 @@ vendor/
 .vscode/
 *.swp
 *.swo
+coverage.out
+coverage-report.txt
