@@ -122,7 +122,7 @@ func (h *HostedBackend) Push(slot string, data []byte, meta map[string]string) e
 	if err != nil {
 		return fmt.Errorf("request failed: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	// Check response
 	if resp.StatusCode == 401 {
@@ -153,7 +153,7 @@ func (h *HostedBackend) Pull(slot string) ([]byte, map[string]string, error) {
 	if err != nil {
 		return nil, nil, fmt.Errorf("request failed: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	// Check response
 	if resp.StatusCode == 401 {
@@ -214,7 +214,7 @@ func (h *HostedBackend) List() ([]RemoteSlot, error) {
 	if err != nil {
 		return nil, fmt.Errorf("request failed: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	// Check response
 	if resp.StatusCode == 401 {
@@ -262,7 +262,7 @@ func (h *HostedBackend) Delete(slot string) error {
 	if err != nil {
 		return fmt.Errorf("request failed: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	// Check response
 	if resp.StatusCode == 401 {
@@ -307,7 +307,7 @@ func Signup(baseURL, email, password string) error {
 	if err != nil {
 		return fmt.Errorf("request failed: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	// Check response
 	if resp.StatusCode == 409 {
@@ -362,7 +362,7 @@ func Login(baseURL, email, password string) error {
 	if err != nil {
 		return fmt.Errorf("request failed: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	// Check response
 	if resp.StatusCode == 401 || resp.StatusCode == 404 {

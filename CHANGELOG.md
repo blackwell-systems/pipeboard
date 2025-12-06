@@ -8,10 +8,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Hosted backend** - New backend option for mobile device sync
+  - RESTful API backend for iOS/Android app integration
+  - `pipeboard signup` - Create a new account
+  - `pipeboard login` - Authenticate with hosted backend
+  - `pipeboard logout` - Clear stored authentication token
+  - Push/pull/list/delete slots via authenticated HTTP API
+  - BYOB (Bring Your Own Bucket) alternative with managed infrastructure
+- **Secure token storage** - JWT tokens stored securely per platform
+  - macOS: System keychain via `security` command
+  - Linux/Windows: Encrypted file storage with machine-specific key
+  - AES-256-GCM encryption for file-based token storage
 - **Slot aliases** - Define shortcuts for frequently used slot names
   - Configure in `aliases` section of config.yaml
   - Use short names with push/pull/show/rm: `pipeboard pull k` → pulls from "kube-config"
   - Example: `aliases: { k: kube-config, p: prod-secrets }`
+
+### Changed
+- Help text updated to show S3, local, and hosted backend options
+- Test count increased to 669 tests (comprehensive coverage for hosted backend and auth)
+- Test coverage includes:
+  - Token encryption/decryption round-trips
+  - Token store file operations (create, read, update, delete)
+  - Hosted backend HTTP operations with mock servers
+  - Auth command validation (signup, login, logout)
+  - Error handling for all API error codes (401, 404, 409, 500)
 
 ## [0.7.4] - 2025-12-03
 

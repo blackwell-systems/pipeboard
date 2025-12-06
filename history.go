@@ -22,10 +22,10 @@ type HistoryEntry struct {
 // ClipboardHistoryEntry stores clipboard content snapshots
 type ClipboardHistoryEntry struct {
 	Timestamp time.Time `json:"timestamp"`
-	Hash      string    `json:"hash"`              // SHA256 hash for deduplication
-	Preview   string    `json:"preview"`           // First 100 chars (may be encrypted preview if encryption enabled)
+	Hash      string    `json:"hash"`    // SHA256 hash for deduplication
+	Preview   string    `json:"preview"` // First 100 chars (may be encrypted preview if encryption enabled)
 	Size      int64     `json:"size"`
-	Content   []byte    `json:"content"`           // Full content (may be encrypted)
+	Content   []byte    `json:"content"`             // Full content (may be encrypted)
 	Encrypted bool      `json:"encrypted,omitempty"` // true if content is encrypted
 }
 

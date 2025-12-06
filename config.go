@@ -40,7 +40,7 @@ type FxConfig struct {
 }
 
 type SyncConfig struct {
-	Backend    string        `yaml:"backend"`              // "none", "s3", "local", or "hosted"
+	Backend    string        `yaml:"backend"` // "none", "s3", "local", or "hosted"
 	S3         *S3Config     `yaml:"s3,omitempty"`
 	Local      *LocalConfig  `yaml:"local,omitempty"`
 	Hosted     *HostedConfig `yaml:"hosted,omitempty"`
