@@ -11,14 +11,14 @@ func TestCmdSignup(t *testing.T) {
 	t.Run("missing config", func(t *testing.T) {
 		// Use a temp dir with no config
 		originalXDG := os.Getenv("XDG_CONFIG_HOME")
-		defer os.Setenv("XDG_CONFIG_HOME", originalXDG)
+		defer func() { _ = os.Setenv("XDG_CONFIG_HOME", originalXDG) }()
 
 		testDir := t.TempDir()
-		os.Setenv("XDG_CONFIG_HOME", testDir)
+		_ = os.Setenv("XDG_CONFIG_HOME", testDir)
 
 		// Override configPath to use temp dir
-		os.Setenv("PIPEBOARD_CONFIG", filepath.Join(testDir, "nonexistent.yaml"))
-		defer os.Unsetenv("PIPEBOARD_CONFIG")
+		_ = os.Setenv("PIPEBOARD_CONFIG", filepath.Join(testDir, "nonexistent.yaml"))
+		defer func() { _ = os.Unsetenv("PIPEBOARD_CONFIG") }()
 
 		err := cmdSignup([]string{})
 		if err == nil {
@@ -28,21 +28,25 @@ func TestCmdSignup(t *testing.T) {
 
 	t.Run("backend not hosted", func(t *testing.T) {
 		testDir := t.TempDir()
-		os.Setenv("XDG_CONFIG_HOME", testDir)
-		defer os.Setenv("XDG_CONFIG_HOME", "")
+		_ = os.Setenv("XDG_CONFIG_HOME", testDir)
+		defer func() { _ = os.Setenv("XDG_CONFIG_HOME", "") }()
 
 		// Create config with S3 backend
 		configPath := filepath.Join(testDir, "pipeboard", "config.yaml")
-		os.MkdirAll(filepath.Dir(configPath), 0755)
+		if err := os.MkdirAll(filepath.Dir(configPath), 0755); err != nil {
+			t.Fatal(err)
+		}
 		configContent := `sync:
   backend: s3
   s3:
     bucket: test
     region: us-east-1
 `
-		os.WriteFile(configPath, []byte(configContent), 0644)
-		os.Setenv("PIPEBOARD_CONFIG", configPath)
-		defer os.Unsetenv("PIPEBOARD_CONFIG")
+		if err := os.WriteFile(configPath, []byte(configContent), 0644); err != nil {
+			t.Fatal(err)
+		}
+		_ = os.Setenv("PIPEBOARD_CONFIG", configPath)
+		defer func() { _ = os.Unsetenv("PIPEBOARD_CONFIG") }()
 
 		err := cmdSignup([]string{})
 		if err == nil {
@@ -59,9 +63,11 @@ func TestCmdSignup(t *testing.T) {
   hosted:
     email: test@example.com
 `
-		os.WriteFile(configPath, []byte(configContent), 0644)
-		os.Setenv("PIPEBOARD_CONFIG", configPath)
-		defer os.Unsetenv("PIPEBOARD_CONFIG")
+		if err := os.WriteFile(configPath, []byte(configContent), 0644); err != nil {
+			t.Fatal(err)
+		}
+		_ = os.Setenv("PIPEBOARD_CONFIG", configPath)
+		defer func() { _ = os.Unsetenv("PIPEBOARD_CONFIG") }()
 
 		err := cmdSignup([]string{})
 		if err == nil {
@@ -74,13 +80,13 @@ func TestCmdSignup(t *testing.T) {
 func TestCmdLogin(t *testing.T) {
 	t.Run("missing config", func(t *testing.T) {
 		originalXDG := os.Getenv("XDG_CONFIG_HOME")
-		defer os.Setenv("XDG_CONFIG_HOME", originalXDG)
+		defer func() { _ = os.Setenv("XDG_CONFIG_HOME", originalXDG) }()
 
 		testDir := t.TempDir()
-		os.Setenv("XDG_CONFIG_HOME", testDir)
+		_ = os.Setenv("XDG_CONFIG_HOME", testDir)
 
-		os.Setenv("PIPEBOARD_CONFIG", filepath.Join(testDir, "nonexistent.yaml"))
-		defer os.Unsetenv("PIPEBOARD_CONFIG")
+		_ = os.Setenv("PIPEBOARD_CONFIG", filepath.Join(testDir, "nonexistent.yaml"))
+		defer func() { _ = os.Unsetenv("PIPEBOARD_CONFIG") }()
 
 		err := cmdLogin([]string{})
 		if err == nil {
@@ -95,9 +101,11 @@ func TestCmdLogin(t *testing.T) {
 		configContent := `sync:
   backend: local
 `
-		os.WriteFile(configPath, []byte(configContent), 0644)
-		os.Setenv("PIPEBOARD_CONFIG", configPath)
-		defer os.Unsetenv("PIPEBOARD_CONFIG")
+		if err := os.WriteFile(configPath, []byte(configContent), 0644); err != nil {
+			t.Fatal(err)
+		}
+		_ = os.Setenv("PIPEBOARD_CONFIG", configPath)
+		defer func() { _ = os.Unsetenv("PIPEBOARD_CONFIG") }()
 
 		err := cmdLogin([]string{})
 		if err == nil {
@@ -110,8 +118,8 @@ func TestCmdLogin(t *testing.T) {
 func TestCmdLogout(t *testing.T) {
 	t.Run("missing config", func(t *testing.T) {
 		testDir := t.TempDir()
-		os.Setenv("PIPEBOARD_CONFIG", filepath.Join(testDir, "nonexistent.yaml"))
-		defer os.Unsetenv("PIPEBOARD_CONFIG")
+		_ = os.Setenv("PIPEBOARD_CONFIG", filepath.Join(testDir, "nonexistent.yaml"))
+		defer func() { _ = os.Unsetenv("PIPEBOARD_CONFIG") }()
 
 		err := cmdLogout([]string{})
 		if err == nil {
@@ -129,9 +137,11 @@ func TestCmdLogout(t *testing.T) {
   hosted:
     url: https://example.com
 `
-		os.WriteFile(configPath, []byte(configContent), 0644)
-		os.Setenv("PIPEBOARD_CONFIG", configPath)
-		defer os.Unsetenv("PIPEBOARD_CONFIG")
+		if err := os.WriteFile(configPath, []byte(configContent), 0644); err != nil {
+			t.Fatal(err)
+		}
+		_ = os.Setenv("PIPEBOARD_CONFIG", configPath)
+		defer func() { _ = os.Unsetenv("PIPEBOARD_CONFIG") }()
 
 		err := cmdLogout([]string{})
 		if err == nil {
@@ -141,8 +151,8 @@ func TestCmdLogout(t *testing.T) {
 
 	t.Run("successful logout", func(t *testing.T) {
 		testDir := t.TempDir()
-		os.Setenv("XDG_CONFIG_HOME", testDir)
-		defer os.Setenv("XDG_CONFIG_HOME", "")
+		_ = os.Setenv("XDG_CONFIG_HOME", testDir)
+		defer func() { _ = os.Setenv("XDG_CONFIG_HOME", "") }()
 
 		email := "logout-cmd-test@example.com"
 
@@ -152,7 +162,9 @@ func TestCmdLogout(t *testing.T) {
 		}
 
 		configPath := filepath.Join(testDir, "pipeboard", "config.yaml")
-		os.MkdirAll(filepath.Dir(configPath), 0755)
+		if err := os.MkdirAll(filepath.Dir(configPath), 0755); err != nil {
+			t.Fatal(err)
+		}
 		configContent := `sync:
   backend: hosted
   hosted:

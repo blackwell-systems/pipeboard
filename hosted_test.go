@@ -58,7 +58,7 @@ func TestHostedBackendPush(t *testing.T) {
 	if err := storeToken(email, token); err != nil {
 		t.Fatalf("failed to store token: %v", err)
 	}
-	defer clearToken(email)
+	defer func() { _ = clearToken(email) }()
 
 	t.Run("successful push", func(t *testing.T) {
 		// Create mock server
@@ -112,7 +112,7 @@ func TestHostedBackendPush(t *testing.T) {
 	t.Run("server error", func(t *testing.T) {
 		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusInternalServerError)
-			w.Write([]byte("internal error"))
+			_, _ = w.Write([]byte("internal error"))
 		}))
 		defer server.Close()
 
@@ -186,7 +186,7 @@ func TestHostedBackendPull(t *testing.T) {
 	if err := storeToken(email, token); err != nil {
 		t.Fatalf("failed to store token: %v", err)
 	}
-	defer clearToken(email)
+	defer func() { _ = clearToken(email) }()
 
 	t.Run("successful pull", func(t *testing.T) {
 		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -200,7 +200,7 @@ func TestHostedBackendPull(t *testing.T) {
 				SizeBytes:     9,
 				UpdatedAt:     "2025-12-06T00:00:00Z",
 			}
-			json.NewEncoder(w).Encode(response)
+			_ = json.NewEncoder(w).Encode(response)
 		}))
 		defer server.Close()
 
@@ -228,7 +228,7 @@ func TestHostedBackendPull(t *testing.T) {
 	t.Run("not found", func(t *testing.T) {
 		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusNotFound)
-			w.Write([]byte("slot not found"))
+			_, _ = w.Write([]byte("slot not found"))
 		}))
 		defer server.Close()
 
@@ -254,7 +254,7 @@ func TestHostedBackendPull(t *testing.T) {
 				EncryptedData: "!!!invalid-base64!!!",
 				ContentType:   "text/plain",
 			}
-			json.NewEncoder(w).Encode(response)
+			_ = json.NewEncoder(w).Encode(response)
 		}))
 		defer server.Close()
 
@@ -281,11 +281,11 @@ func TestHostedBackendList(t *testing.T) {
 	if err := storeToken(email, token); err != nil {
 		t.Fatalf("failed to store token: %v", err)
 	}
-	defer clearToken(email)
+	defer func() { _ = clearToken(email) }()
 
 	t.Run("empty list", func(t *testing.T) {
 		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			json.NewEncoder(w).Encode([]slotMetadataResponse{})
+			_ = json.NewEncoder(w).Encode([]slotMetadataResponse{})
 		}))
 		defer server.Close()
 
@@ -323,7 +323,7 @@ func TestHostedBackendList(t *testing.T) {
 					UpdatedAt:   "2025-12-05T00:00:00Z",
 				},
 			}
-			json.NewEncoder(w).Encode(response)
+			_ = json.NewEncoder(w).Encode(response)
 		}))
 		defer server.Close()
 
@@ -359,7 +359,7 @@ func TestHostedBackendDelete(t *testing.T) {
 	if err := storeToken(email, token); err != nil {
 		t.Fatalf("failed to store token: %v", err)
 	}
-	defer clearToken(email)
+	defer func() { _ = clearToken(email) }()
 
 	t.Run("successful delete", func(t *testing.T) {
 		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -428,12 +428,12 @@ func TestSignup(t *testing.T) {
 				UserID: "user-id-123",
 				Email:  "test@example.com",
 			}
-			json.NewEncoder(w).Encode(response)
+			_ = json.NewEncoder(w).Encode(response)
 		}))
 		defer server.Close()
 
 		email := "test@example.com"
-		defer clearToken(email)
+		defer func() { _ = clearToken(email) }()
 
 		err := Signup(server.URL, email, "password123")
 		if err != nil {
@@ -453,7 +453,7 @@ func TestSignup(t *testing.T) {
 	t.Run("server error", func(t *testing.T) {
 		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusBadRequest)
-			w.Write([]byte("email already exists"))
+			_, _ = w.Write([]byte("email already exists"))
 		}))
 		defer server.Close()
 
@@ -478,12 +478,12 @@ func TestLogin(t *testing.T) {
 				UserID: "user-id-456",
 				Email:  req.Email,
 			}
-			json.NewEncoder(w).Encode(response)
+			_ = json.NewEncoder(w).Encode(response)
 		}))
 		defer server.Close()
 
 		email := "login@example.com"
-		defer clearToken(email)
+		defer func() { _ = clearToken(email) }()
 
 		err := Login(server.URL, email, "correct-password")
 		if err != nil {
@@ -503,7 +503,7 @@ func TestLogin(t *testing.T) {
 	t.Run("wrong password", func(t *testing.T) {
 		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusUnauthorized)
-			w.Write([]byte("invalid credentials"))
+			_, _ = w.Write([]byte("invalid credentials"))
 		}))
 		defer server.Close()
 
@@ -563,7 +563,7 @@ func TestHostedBackendWithEncryption(t *testing.T) {
 	if err := storeToken(email, token); err != nil {
 		t.Fatalf("failed to store token: %v", err)
 	}
-	defer clearToken(email)
+	defer func() { _ = clearToken(email) }()
 
 	// Storage for the encrypted data on the "server"
 	var storedData string
@@ -585,7 +585,7 @@ func TestHostedBackendWithEncryption(t *testing.T) {
 				SizeBytes:     len(storedData),
 				UpdatedAt:     "2025-12-06T00:00:00Z",
 			}
-			json.NewEncoder(w).Encode(response)
+			_ = json.NewEncoder(w).Encode(response)
 		}
 	}))
 	defer server.Close()
