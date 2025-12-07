@@ -270,10 +270,10 @@ func TestTokenFilePath(t *testing.T) {
 func TestTokenStoreLoadSave(t *testing.T) {
 	// Set up a temporary config directory
 	originalXDG := os.Getenv("XDG_CONFIG_HOME")
-	defer os.Setenv("XDG_CONFIG_HOME", originalXDG)
+	defer func() { _ = os.Setenv("XDG_CONFIG_HOME", originalXDG) }()
 
 	testDir := t.TempDir()
-	os.Setenv("XDG_CONFIG_HOME", testDir)
+	_ = os.Setenv("XDG_CONFIG_HOME", testDir)
 
 	email := "store-test@example.com"
 	token := "test-token-789"
@@ -295,13 +295,13 @@ func TestTokenStoreLoadSave(t *testing.T) {
 		}
 
 		// Cleanup
-		clearTokenFile(email)
+		_ = clearTokenFile(email)
 	})
 
 	t.Run("load nonexistent store", func(t *testing.T) {
 		// Use a fresh temp dir
 		testDir2 := t.TempDir()
-		os.Setenv("XDG_CONFIG_HOME", testDir2)
+		_ = os.Setenv("XDG_CONFIG_HOME", testDir2)
 
 		store, err := loadTokenStore()
 		if err != nil {
