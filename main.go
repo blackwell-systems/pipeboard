@@ -1,3 +1,8 @@
+// Pipeboard is a cross-platform clipboard sync tool that
+// keeps your clipboard contents synchronized across devices.
+// It supports local storage, remote backends (S3, hosted),
+// encrypted slots, peer-to-peer sharing, and CLI/watch modes
+// for seamless copy-paste workflows.
 package main
 
 import (
