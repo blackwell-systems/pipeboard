@@ -27,7 +27,7 @@ func TestTokenStorage(t *testing.T) {
 		}
 
 		// Cleanup
-		clearToken(email)
+		_ = clearToken(email)
 	})
 
 	t.Run("retrieve nonexistent token", func(t *testing.T) {
@@ -57,7 +57,7 @@ func TestTokenStorage(t *testing.T) {
 
 	t.Run("overwrite existing token", func(t *testing.T) {
 		email2 := "overwrite-test@example.com"
-		defer clearToken(email2)
+		defer func() { _ = clearToken(email2) }()
 
 		// Store first token
 		if err := storeToken(email2, "first-token"); err != nil {
@@ -82,8 +82,8 @@ func TestTokenStorage(t *testing.T) {
 	t.Run("multiple users", func(t *testing.T) {
 		user1 := "user1@example.com"
 		user2 := "user2@example.com"
-		defer clearToken(user1)
-		defer clearToken(user2)
+		defer func() { _ = clearToken(user1) }()
+		defer func() { _ = clearToken(user2) }()
 
 		// Store tokens for two different users
 		if err := storeToken(user1, "token1"); err != nil {
@@ -249,10 +249,10 @@ func TestEncryptDecryptToken(t *testing.T) {
 func TestTokenFilePath(t *testing.T) {
 	t.Run("respects XDG_CONFIG_HOME", func(t *testing.T) {
 		originalXDG := os.Getenv("XDG_CONFIG_HOME")
-		defer os.Setenv("XDG_CONFIG_HOME", originalXDG)
+		defer func() { _ = os.Setenv("XDG_CONFIG_HOME", originalXDG) }()
 
 		testDir := t.TempDir()
-		os.Setenv("XDG_CONFIG_HOME", testDir)
+		_ = os.Setenv("XDG_CONFIG_HOME", testDir)
 
 		path, err := tokenFilePath()
 		if err != nil {

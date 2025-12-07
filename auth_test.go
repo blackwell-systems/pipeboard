@@ -171,9 +171,11 @@ func TestCmdLogout(t *testing.T) {
     url: https://example.com
     email: logout-cmd-test@example.com
 `
-		os.WriteFile(configPath, []byte(configContent), 0644)
-		os.Setenv("PIPEBOARD_CONFIG", configPath)
-		defer os.Unsetenv("PIPEBOARD_CONFIG")
+		if err := os.WriteFile(configPath, []byte(configContent), 0644); err != nil {
+			t.Fatal(err)
+		}
+		_ = os.Setenv("PIPEBOARD_CONFIG", configPath)
+		defer func() { _ = os.Unsetenv("PIPEBOARD_CONFIG") }()
 
 		err := cmdLogout([]string{})
 		if err != nil {
