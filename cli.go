@@ -379,7 +379,7 @@ Config: ~/.config/pipeboard/config.yaml
       shell: "sed 's/\\x1b\\[[0-9;]*m//g'"
 
   sync:
-    backend: local         # or "s3" for cloud sync
+    backend: local         # "local", "s3", or "hosted"
     encryption: aes256     # client-side encryption (optional)
     passphrase: secret     # encryption passphrase
     ttl_days: 30           # auto-expire slots (optional)
@@ -387,6 +387,10 @@ Config: ~/.config/pipeboard/config.yaml
     # s3:
     #   bucket: my-bucket
     #   region: us-west-2
+    # For hosted backend:
+    # hosted:
+    #   url: https://api.pipeboard.dev
+    #   email: you@example.com
 
 Examples:
   echo "hello" | pipeboard             # implicit copy
